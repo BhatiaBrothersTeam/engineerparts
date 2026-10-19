@@ -86,6 +86,12 @@ Use the same `ENGINEERPARTS_PROXY_SECRET` value in the Next.js environment and W
 
 The plugin uses WooCommerce customers, WordPress password handling, required email verification, WordPress-native reset keys, and revocable opaque sessions. No JWT plugin or separate customer database is required. Configure reliable WordPress SMTP/email delivery before launch; registration verification and password reset depend on `wp_mail`.
 
+### Inventory and payment safety
+
+Checkout submits orders through the WooCommerce Store API. WooCommerce is the only component that reserves, reduces, and releases product stock; the storefront does not manually decrement inventory. The WordPress plugin serializes retries with the same checkout reference and returns the existing order rather than creating a duplicate. Payment returns remain pending until WooCommerce reports a paid order status. A verified payment callback arriving after an order's hold was released is kept **On hold** for manual reconciliation rather than reducing stock late.
+
+Enable **Manage stock** and set a real quantity on each limited-stock WooCommerce product. In **WooCommerce > Settings > Products > Inventory**, configure **Hold stock (minutes)** to a positive period (for example, 60 minutes) and keep WP-Cron/Action Scheduler running so expired unpaid orders release their stock holds. Deploy the updated `wordpress-plugin/engineerparts-account` plugin first (it adds the idempotent checkout endpoint), then deploy the Next.js application.
+
 Required WordPress configuration:
 
 1. Enable WooCommerce customer account creation.

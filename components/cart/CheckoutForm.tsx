@@ -6,11 +6,13 @@ import { useCart } from "@/components/providers/CartProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import { track } from "@/lib/analytics";
+import { logError } from "@/lib/logger";
 import { CONTACT_EMAIL, CONTACT_PHONE, formatPrice, isPlausibleAddress, isValidInternationalPhone, normalizePhone } from "@/lib/utils";
 import type { WooCountry } from "@/lib/woocommerce";
 import type { AccountCustomer, CustomerAddress } from "@/lib/account";
 
 const ORDER_SUBMISSION_ERROR = "We could not submit your order. Please try again or contact our sales team.";
+const CHECKOUT_REFERENCE_STORAGE_KEY = "engineerparts.checkout.reference";
 
 interface CheckoutAddress {
   firstName: string;
@@ -61,7 +63,7 @@ const EMPTY: CheckoutState = {
 };
 
 export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
-  const { items, subtotal, shipping, tax, total, shippingLabel, freeShippingRemaining, freeShippingLabel, quoteLoading, quoteError, stockValid, setQuoteCountry, updateQuantity, removeItem, clear, ready } = useCart();
+  const { items, subtotal, shipping, tax, total, shippingLabel, freeShippingRemaining, freeShippingLabel, quoteLoading, quoteError, stockValid, refreshQuote, setQuoteCountry, updateQuantity, removeItem, ready } = useCart();
   const { authenticated, loading: authLoading } = useAuth();
   const [form, setForm] = useState<CheckoutState>(EMPTY);
   const [step, setStep] = useState<CheckoutStep>(1);
@@ -70,7 +72,7 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
   const [state, setState] = useState<"idle" | "submitting">("idle");
   const [error, setError] = useState<string | null>(null);
   const edited = useRef(false);
-  const orderReference = useRef<string | null>(null);
+  const orderReference = useRef<{ signature: string; value: string } | null>(null);
 
   useEffect(() => {
     if (!authenticated) return;
@@ -184,10 +186,39 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
     setState("submitting");
     track("begin_checkout", { item_count: items.length, value: total });
 
-    if (!orderReference.current) {
-      orderReference.current = `ORD-${Date.now().toString(36).toUpperCase()}`;
+    const cartSignature = JSON.stringify(
+      items
+        .map(({ productId, quantity }) => ({ productId, quantity }))
+        .sort((left, right) => left.productId.localeCompare(right.productId)),
+    );
+    let reference = orderReference.current?.signature === cartSignature
+      ? orderReference.current.value
+      : null;
+    if (!reference) {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(CHECKOUT_REFERENCE_STORAGE_KEY) ?? "null") as {
+          signature?: unknown;
+          reference?: unknown;
+        } | null;
+        if (saved?.signature === cartSignature && typeof saved.reference === "string") {
+          reference = saved.reference;
+        }
+      } catch {
+        // Storage may be disabled; the in-memory key still protects retries in this page.
+      }
     }
-    const reference = orderReference.current;
+    if (!reference) {
+      reference = `ORD-${window.crypto.randomUUID().toUpperCase()}`;
+      try {
+        sessionStorage.setItem(CHECKOUT_REFERENCE_STORAGE_KEY, JSON.stringify({
+          signature: cartSignature,
+          reference,
+        }));
+      } catch {
+        // Keep checkout available when the browser blocks session storage.
+      }
+    }
+    orderReference.current = { signature: cartSignature, value: reference };
     const order = {
       order_id: reference,
       customer: {
@@ -209,19 +240,41 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
       });
       const result = (await response.json().catch(() => null)) as { error?: string; code?: string; payment_url?: string; order_number?: string } | null;
       if (!response.ok || !result?.payment_url) {
-        if (response.status === 409 && result?.error) {
+        logError("checkout_submit_rejected", { status: response.status, code: result?.code, message: result?.error });
+        if (result?.code === "shipping_option_required") {
+          setError(result.error ?? "WooCommerce could not select a shipping method for this address. Check the shipping methods in WooCommerce → Settings → Shipping.");
+        } else if (result?.code === "insufficient_stock") {
+          refreshQuote();
+          setError(result.error ?? "Sorry, this product is no longer available in the requested quantity. Please update your cart and try again.");
+        } else if (result?.code === "checkout_attempt_closed") {
+          orderReference.current = null;
+          try {
+            sessionStorage.removeItem(CHECKOUT_REFERENCE_STORAGE_KEY);
+          } catch {
+            // Keep checkout available when the browser blocks session storage.
+          }
+          setError(result.error ?? "This payment attempt has ended. Please submit checkout again to start a new attempt.");
+        } else if (result?.code === "checkout_request_conflict") {
+          setError(result.error ?? "This checkout already created an order. Return to that order before changing its details.");
+        } else if (result?.code === "checkout_proxy_not_deployed") {
+          setError(result.error ?? "The WordPress checkout endpoint is not active. Please contact support.");
+        } else if (response.status === 409 && result?.error) {
           setError(result.error);
         } else if (result?.code === "payment_handoff_failed") {
           setError(result.error ?? "Your order was created, but secure payment could not be started. Please contact support before placing another order.");
+        } else if (result?.code === "payment_gateway_failed") {
+          setError(result.error ?? "Nomod could not start the payment. Check WooCommerce → Orders before retrying.");
+        } else if (result?.code === "invalid_checkout_address") {
+          setError(result.error ?? "WooCommerce rejected the billing or delivery address. Check the country, state/province, postal code, and phone formats.");
         } else {
           setError(ORDER_SUBMISSION_ERROR);
         }
         setState("idle");
         return;
       }
-      clear();
       window.location.assign(result.payment_url);
-    } catch {
+    } catch (error) {
+      logError("checkout_submit_failed", { error });
       setError(ORDER_SUBMISSION_ERROR);
       setState("idle");
     }

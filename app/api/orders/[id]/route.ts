@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWooCommerceOrderIfKeyMatches } from "@/lib/woocommerce";
+import { logError } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,12 +35,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       },
     });
   } catch (error) {
-    console.error(JSON.stringify({
-      timestamp: new Date().toISOString(),
+    logError("woocommerce_order_lookup_failed", {
       endpoint: "/api/orders/[id]",
-      category: "woocommerce_order_lookup_failed",
-      error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
-    }));
+      error,
+    });
     return NextResponse.json(
       { ok: false, error: "We could not check your order status. Please try again shortly." },
       { status: 502 },

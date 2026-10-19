@@ -1,17 +1,28 @@
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import {
   getWooCommerceCartQuote,
   submitWooCommerceCheckout,
   updateWooCommerceOrder,
+  WooCommerceStoreApiError,
 } from "@/lib/woocommerce";
 import { getCurrentCustomer } from "@/lib/auth-server";
 import { wordpressAccountRequest } from "@/lib/auth-server";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE } from "@/lib/account";
 import { isPlausibleAddress, isValidInternationalPhone } from "@/lib/utils";
+import { logError, redact } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const INVENTORY_ERROR_CODES = new Set([
+  "insufficient_stock",
+  "woocommerce_rest_product_partially_out_of_stock",
+  "woocommerce_rest_product_out_of_stock",
+  "woocommerce_rest_product_not_purchasable",
+  "woocommerce_rest_product_too_many_in_cart",
+]);
 
 interface OrderPayload {
   order_id: string;
@@ -45,7 +56,7 @@ function validPayload(value: unknown): value is OrderPayload {
   const billing = customer?.billing;
   return Boolean(
     typeof payload.order_id === "string" &&
-      payload.order_id.trim() &&
+      /^[A-Za-z0-9_-]{8,80}$/.test(payload.order_id.trim()) &&
       billing &&
       validAddress(billing) &&
       typeof billing.email === "string" &&
@@ -60,9 +71,9 @@ function validPayload(value: unknown): value is OrderPayload {
         (item) => Boolean(
           item &&
             typeof item === "object" &&
-            Number.isInteger(Number(item.productId)) &&
+            Number.isSafeInteger(Number(item.productId)) &&
             Number(item.productId) > 0 &&
-            Number.isInteger(item.quantity) &&
+            Number.isSafeInteger(item.quantity) &&
             item.quantity > 0,
         ),
       ) &&
@@ -128,24 +139,41 @@ export async function POST(request: NextRequest) {
     };
     const shippingAddress = {
       ...wooAddress(payload.customer.shipping ?? payload.customer.billing),
-      email: billingAddress.email,
       phone: billingAddress.phone,
     };
     const customer = await getCurrentCustomer();
     const sessionToken = cookies().get(SESSION_COOKIE)?.value;
+    const quantities = new Map<string, number>();
+    for (const item of payload.items) {
+      const productId = String(Number(item.productId));
+      const quantity = (quantities.get(productId) ?? 0) + item.quantity;
+      if (!Number.isSafeInteger(quantity)) {
+        return NextResponse.json({ ok: false, error: "Invalid order quantities." }, { status: 400 });
+      }
+      quantities.set(productId, quantity);
+    }
+    const items = [...quantities]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([productId, quantity]) => ({ productId, quantity }));
     const quote = await getWooCommerceCartQuote(
-      payload.items,
+      items,
       payload.customer.shipping?.country ?? payload.customer.billing.country,
     );
-    const unavailable = payload.items
+    const unavailable = items
       .map((item) => {
         const stock = quote.stockLimits.find(({ productId }) => productId === item.productId);
         return { ...item, maxQuantity: stock ? stock.maxQuantity : 0 };
       })
       .find((item) => item.maxQuantity !== null && item.quantity > item.maxQuantity);
     if (unavailable) {
+      logError("woocommerce_inventory_conflict", {
+        endpoint: "/api/orders",
+        product_id: unavailable.productId,
+        requested_quantity: unavailable.quantity,
+        available_quantity: unavailable.maxQuantity,
+      });
       return NextResponse.json(
-        { ok: false, error: unavailable.maxQuantity === 0
+        { ok: false, code: "insufficient_stock", error: unavailable.maxQuantity === 0
           ? "This product is out of stock. Please update your cart."
           : `Only ${unavailable.maxQuantity} of this product are currently in stock. Please update your cart.` },
         { status: 409 },
@@ -160,21 +188,31 @@ export async function POST(request: NextRequest) {
     ]
       .filter(Boolean)
       .join("\n");
+    const requestHash = createHash("sha256")
+      .update(JSON.stringify({
+        items,
+        billing: billingAddress,
+        shipping: shippingAddress,
+        customerNote: payload.customer_note?.trim() ?? "",
+        trn: payload.trn?.trim() ?? "",
+        saveAddress: Boolean(payload.saveAddress),
+      }))
+      .digest("hex");
     const checkout = await submitWooCommerceCheckout({
-      items: payload.items,
+      items,
       billing: billingAddress,
       shipping: shippingAddress,
       customerNote,
+      idempotencyKey: payload.order_id.trim(),
+      requestHash,
     });
     const paymentUrl = checkout.payment_result.redirect_url;
 
     if (!paymentUrl) {
-      console.error(JSON.stringify({
-        timestamp: new Date().toISOString(),
+      logError("store_api_payment_redirect_missing", {
         endpoint: "/api/orders",
-        category: "store_api_payment_redirect_missing",
         order_id: checkout.order_id,
-      }));
+      });
       return NextResponse.json(
         {
           ok: false,
@@ -196,13 +234,11 @@ export async function POST(request: NextRequest) {
       });
       orderNumber = order.number || orderNumber;
     } catch (error) {
-      console.error(JSON.stringify({
-        timestamp: new Date().toISOString(),
+      logError("storefront_order_metadata_update_failed", {
         endpoint: "/api/orders",
-        category: "storefront_order_metadata_update_failed",
         order_id: checkout.order_id,
-        error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
-      }));
+        error,
+      });
     }
     if (customer && payload.saveAddress) {
       if (sessionToken) {
@@ -225,12 +261,145 @@ export async function POST(request: NextRequest) {
       payment_url: paymentUrl,
     });
   } catch (error) {
-    console.error(JSON.stringify({
-      timestamp: new Date().toISOString(),
+    if (
+      error instanceof WooCommerceStoreApiError &&
+      error.path === "/checkout" &&
+      error.code === "rest_no_route"
+    ) {
+      logError("woocommerce_checkout_proxy_missing", {
+        endpoint: "/api/orders",
+        wordpress_status: error.status,
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "checkout_proxy_not_deployed",
+          error: "The WordPress checkout endpoint is not active. Deploy and activate the latest EngineerParts Customer Accounts plugin on the configured WordPress site, then try again. No order was created.",
+        },
+        { status: 503 },
+      );
+    }
+    if (
+      error instanceof WooCommerceStoreApiError &&
+      error.path === "/checkout" &&
+      error.code === "woocommerce_rest_cart_empty"
+    ) {
+      logError("woocommerce_checkout_cart_empty", {
+        endpoint: "/api/orders",
+        wordpress_status: error.status,
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "checkout_cart_empty",
+          error: "Your checkout cart expired before the order was created. Please return to your cart and try again. If this keeps happening, update the EngineerParts WordPress plugin.",
+        },
+        { status: 409 },
+      );
+    }
+    if (error instanceof WooCommerceStoreApiError && INVENTORY_ERROR_CODES.has(error.code)) {
+      logError("woocommerce_inventory_conflict", {
+        endpoint: "/api/orders",
+        path: error.path,
+        code: error.code,
+        status: error.status,
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "insufficient_stock",
+          error: "Sorry, this product is no longer available in the requested quantity. Please update your cart and try again.",
+        },
+        { status: 409 },
+      );
+    }
+    if (
+      error instanceof WooCommerceStoreApiError &&
+      (error.code === "checkout_attempt_closed" || error.code === "checkout_request_conflict")
+    ) {
+      return NextResponse.json(
+        { ok: false, code: error.code, error: error.message },
+        { status: 409 },
+      );
+    }
+    if (error instanceof WooCommerceStoreApiError && error.code === "woocommerce_rest_guest_checkout_disabled") {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "guest_checkout_disabled",
+          error: "WooCommerce guest checkout is disabled. The storefront account login does not create a WordPress login session. Enable guest checkout in WooCommerce → Settings → Accounts & Privacy; the order will still be linked to your customer account.",
+        },
+        { status: 409 },
+      );
+    }
+    if (
+      error instanceof WooCommerceStoreApiError &&
+      error.code === "woocommerce_rest_invalid_shipping_option"
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "shipping_option_required",
+          error: "WooCommerce could not select a shipping method for this address. Check the shipping methods in WooCommerce → Settings → Shipping, then try again.",
+        },
+        { status: 409 },
+      );
+    }
+    if (
+      error instanceof WooCommerceStoreApiError &&
+      error.code === "woocommerce_rest_checkout_process_payment_error"
+    ) {
+      logError("woocommerce_payment_gateway_failed", {
+        endpoint: "/api/orders",
+        path: error.path,
+        code: error.code,
+        status: error.status,
+        gateway_message: redact(error.message),
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "payment_gateway_failed",
+          error: "Nomod could not start the payment. WooCommerce may have created an unpaid order, so check WooCommerce → Orders before retrying. If there is no order, check WooCommerce → Status → Logs for the Nomod gateway error.",
+        },
+        { status: 502 },
+      );
+    }
+    if (
+      error instanceof WooCommerceStoreApiError &&
+      error.path === "/cart/update-customer" &&
+      error.code === "rest_invalid_param"
+    ) {
+      logError("woocommerce_address_validation_failed", {
+        endpoint: "/api/orders",
+        invalidParams: error.invalidParams,
+        invalidAddressFields: error.invalidAddressFields,
+      });
+      const fields = error.invalidAddressFields.length
+        ? ` Check these address fields: ${error.invalidAddressFields.join(", ")}.`
+        : " Check the country, state/province, postal code, and phone formats for the selected country.";
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "invalid_checkout_address",
+          error: `WooCommerce rejected the billing or delivery address.${fields}`,
+        },
+        { status: 422 },
+      );
+    }
+    logError("woocommerce_order_failed", {
       endpoint: "/api/orders",
-      category: "woocommerce_order_failed",
-      error: error instanceof Error ? { name: error.name, message: error.message } : String(error),
-    }));
+      error: error instanceof WooCommerceStoreApiError
+        ? {
+            name: error.name,
+            path: error.path,
+            code: error.code,
+            status: error.status,
+            invalidParams: error.invalidParams,
+            invalidAddressFields: error.invalidAddressFields,
+          }
+        : error,
+    });
     return NextResponse.json(
       { ok: false, error: "We could not submit your order. Please try again or contact our sales team." },
       { status: 502 },

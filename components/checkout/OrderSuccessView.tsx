@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useCart } from "@/components/providers/CartProvider";
 import { track } from "@/lib/analytics";
 import { CONTACT_EMAIL, CONTACT_PHONE, formatPrice } from "@/lib/utils";
 
@@ -15,8 +16,9 @@ export interface OrderSummary {
   items: Array<{ name: string; quantity: number; total: string }>;
 }
 
-const CONFIRMED_STATUSES = new Set(["processing", "completed", "on-hold"]);
+const CONFIRMED_STATUSES = new Set(["processing", "completed"]);
 const FAILED_STATUSES = new Set(["failed", "cancelled"]);
+const CHECKOUT_REFERENCE_STORAGE_KEY = "engineerparts.checkout.reference";
 const POLL_SCHEDULE_MS = [3000, 5000, 8000, 13000, 20000, 20000, 20000];
 
 type ViewState = "confirmed" | "confirming" | "timed-out" | "failed";
@@ -37,9 +39,11 @@ export function OrderSuccessView({
   orderKey: string;
 }) {
   const { authenticated } = useAuth();
+  const { clear } = useCart();
   const [order, setOrder] = useState(initialOrder);
   const [view, setView] = useState<ViewState>(deriveState(initialOrder.status));
   const tracked = useRef(false);
+  const cartCleared = useRef(false);
 
   useEffect(() => {
     if (view === "confirmed" && !tracked.current) {
@@ -47,6 +51,22 @@ export function OrderSuccessView({
       track("purchase", { order_id: orderId, value: Number(order.total), currency: order.currency });
     }
   }, [view, orderId, order.total, order.currency]);
+
+  useEffect(() => {
+    if (view === "confirmed" && !cartCleared.current) {
+      cartCleared.current = true;
+      clear();
+    }
+  }, [view, clear]);
+
+  useEffect(() => {
+    if (view !== "confirmed" && view !== "failed") return;
+    try {
+      sessionStorage.removeItem(CHECKOUT_REFERENCE_STORAGE_KEY);
+    } catch {
+      // Storage may be disabled; the completed order remains safe in WooCommerce.
+    }
+  }, [view]);
 
   useEffect(() => {
     if (view !== "confirming") return;
@@ -124,12 +144,17 @@ export function OrderSuccessView({
   }
 
   if (view === "failed") {
+    const cancelled = order.status === "cancelled";
     return (
       <div className="card p-6 sm:p-10">
-        <p className="text-lg font-bold text-navy-900">Payment didn&apos;t go through</p>
-        <p className="mt-2 text-sm text-steel-600">Order #{order.number} was not paid. You can try the payment again, or contact our sales team.</p>
+        <p className="text-lg font-bold text-navy-900">{cancelled ? "Payment attempt expired or was cancelled" : "Payment did not go through"}</p>
+        <p className="mt-2 text-sm text-steel-600">
+          {cancelled
+            ? `Order #${order.number} was cancelled. WooCommerce has released its stock hold; review your cart and try again.`
+            : `Order #${order.number} was not paid. Your cart has been kept so you can try again, or contact our sales team.`}
+        </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          {order.paymentUrl ? <a href={order.paymentUrl} className="btn-primary">Try again</a> : null}
+          <Link href="/checkout" className="btn-primary">Try again</Link>
         </div>
         <SupportFooter />
       </div>
@@ -143,6 +168,9 @@ export function OrderSuccessView({
         <p className="mt-2 text-sm text-steel-600">
           This is taking longer than usual, but your order #{order.number} is safe. We&apos;ll email your receipt as soon as it clears — no need to keep this tab open.
         </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href="/checkout" className="btn-outline">Return to cart</Link>
+        </div>
         <SupportFooter />
       </div>
     );

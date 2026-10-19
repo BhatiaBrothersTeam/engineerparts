@@ -17,6 +17,8 @@ CLAUDE.md
 **/.spyproject/
 **/.ropeproject/
 *.code-workspace
+engineerparts-customer-accounts-1.8.2
+docs
 
 # macOS
 **/.DS_Store
@@ -181,3 +183,4 @@ CLAUDE.md
 *.lz
 *.lzma
 *.iso
+docs/ARCHITECTURE.html

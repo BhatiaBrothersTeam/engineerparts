@@ -2,7 +2,7 @@
 /**
  * Plugin Name: EngineerParts Customer Accounts
  * Description: Secure customer authentication endpoints for the EngineerParts storefront.
- * Version: 1.7.0
+ * Version: 1.8.2
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
  */
@@ -11,9 +11,14 @@ defined('ABSPATH') || exit;
 
 final class EngineerParts_Customer_Accounts {
     private const NAMESPACE = 'engineerparts/v1';
+    private const STOREFRONT_REFERENCE_META = '_engineerparts_storefront_reference';
+    private const STOREFRONT_REQUEST_HASH_META = '_engineerparts_storefront_request_hash';
+    private const STOREFRONT_PAYMENT_URL_META = '_engineerparts_storefront_payment_url';
+    private const STOREFRONT_LATE_PAYMENT_META = '_engineerparts_late_payment_after_hold';
     private const VERIFIED_META = '_engineerparts_email_verified';
     private const VERIFY_HASH_META = '_engineerparts_verify_hash';
     private const VERIFY_EXPIRES_META = '_engineerparts_verify_expires';
+    private static ?array $storefront_checkout_context = null;
     private const CUSTOMER_TYPES = array(
         'End User',
         'Contractor',
@@ -35,6 +40,10 @@ final class EngineerParts_Customer_Accounts {
         add_action('admin_post_engineerparts_payment_handoff', array(self::class, 'payment_handoff'));
         add_action('admin_post_nopriv_engineerparts_payment_handoff', array(self::class, 'payment_handoff'));
         add_action('rest_api_init', array(self::class, 'register_routes'));
+        add_action('woocommerce_new_order', array(self::class, 'tag_storefront_checkout_order'), 10, 2);
+        add_action('woocommerce_store_api_checkout_order_processed', array(self::class, 'tag_storefront_checkout_order'));
+        add_filter('woocommerce_payment_complete_order_status', array(self::class, 'hold_late_storefront_payment'), 10, 3);
+        add_filter('woocommerce_payment_complete_reduce_order_stock', array(self::class, 'prevent_late_storefront_stock_reduction'), 10, 2);
         add_action('engineerparts_purge_sessions', array(self::class, 'purge_sessions'));
         add_filter('woocommerce_get_checkout_order_received_url', array(self::class, 'order_received_url'), 10, 2);
     }
@@ -86,6 +95,7 @@ final class EngineerParts_Customer_Accounts {
         self::route('/account/orders/(?P<id>\d+)/payment-link', 'POST', 'create_payment_link');
         self::route('/account/orders/(?P<id>\d+)', 'GET', 'order');
         self::route('/account/orders/(?P<id>\d+)/reorder', 'POST', 'reorder');
+        self::route('/orders/checkout', 'POST', 'proxy_storefront_checkout');
         self::route('/orders/(?P<id>\d+)/payment-link', 'POST', 'create_proxy_payment_link');
         self::route('/account/enquiries', 'GET', 'enquiries');
         self::route('/account/enquiries/claim', 'POST', 'claim_enquiries');
@@ -417,6 +427,215 @@ final class EngineerParts_Customer_Accounts {
         $configured = defined('ENGINEERPARTS_PROXY_SECRET') ? (string) ENGINEERPARTS_PROXY_SECRET : '';
         $provided = (string) $request->get_header('x-engineerparts-proxy-secret');
         return strlen($configured) >= 32 && hash_equals($configured, $provided);
+    }
+
+    public static function proxy_storefront_checkout(WP_REST_Request $request): WP_REST_Response {
+        global $wpdb;
+
+        $data = self::json($request);
+        $reference = is_string($data['idempotencyKey'] ?? null) ? $data['idempotencyKey'] : '';
+        $request_hash = is_string($data['requestHash'] ?? null) ? $data['requestHash'] : '';
+        $cart_token = is_string($data['cartToken'] ?? null) ? $data['cartToken'] : '';
+        $nonce = is_string($data['nonce'] ?? null) ? $data['nonce'] : '';
+        $checkout = $data['checkout'] ?? null;
+        $raw_email = is_array($checkout) && is_array($checkout['billing_address'] ?? null)
+            ? ($checkout['billing_address']['email'] ?? '')
+            : '';
+        $billing_email = is_string($raw_email)
+            ? sanitize_email($raw_email)
+            : '';
+
+        if (
+            !preg_match('/^[A-Za-z0-9_-]{8,80}$/', $reference) ||
+            !preg_match('/^[a-f0-9]{64}$/', $request_hash) ||
+            strlen($cart_token) > 4096 ||
+            $nonce === '' ||
+            strlen($nonce) > 256 ||
+            !is_array($checkout) ||
+            ($checkout['payment_method'] ?? '') !== 'nomod' ||
+            !is_email($billing_email)
+        ) {
+            return self::error('Invalid checkout request.', 400, 'invalid_checkout_request');
+        }
+
+        $lock_name = 'ep-checkout-' . substr(hash('sha256', $reference), 0, 48);
+        $locked = $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 20)', $lock_name));
+        if ((string) $locked !== '1') {
+            return self::error('Your checkout is already being processed. Please wait and try again.', 503, 'checkout_request_busy');
+        }
+
+        try {
+            $existing = wc_get_orders(array(
+                'limit' => 1,
+                'meta_key' => self::STOREFRONT_REFERENCE_META,
+                'meta_value' => $reference,
+                'return' => 'objects',
+            ));
+            if ($existing) {
+                $order = $existing[0];
+                $existing_hash = (string) $order->get_meta(self::STOREFRONT_REQUEST_HASH_META, true);
+                if (!hash_equals($existing_hash, $request_hash)) {
+                    return self::error('This checkout has already created an order. Return to your existing order before changing its details.', 409, 'checkout_request_conflict');
+                }
+                if ($order->has_status(array('failed', 'cancelled', 'refunded'))) {
+                    return self::error('This payment attempt has ended. Please submit checkout again to start a new attempt.', 409, 'checkout_attempt_closed');
+                }
+
+                $payment_url = (string) $order->get_meta(self::STOREFRONT_PAYMENT_URL_META, true);
+                if (!$payment_url) {
+                    $payment_url = $order->is_paid()
+                        ? $order->get_checkout_order_received_url()
+                        : $order->get_checkout_payment_url();
+                }
+                return self::success(array(
+                    'checkout' => array(
+                        'order_id' => $order->get_id(),
+                        'status' => $order->get_status(),
+                        'payment_result' => array(
+                            'payment_status' => $order->is_paid() ? 'success' : 'pending',
+                            'redirect_url' => $payment_url,
+                        ),
+                    ),
+                ));
+            }
+
+            $store_request = new WP_REST_Request('POST', '/wc/store/v1/checkout');
+            $store_request->set_header('Cart-Token', $cart_token);
+            $store_request->set_header('Nonce', $nonce);
+            $store_request->set_header('Content-Type', 'application/json');
+            $store_request->set_body(wp_json_encode($checkout));
+
+            self::$storefront_checkout_context = array(
+                'reference' => $reference,
+                'request_hash' => $request_hash,
+                'order_id' => 0,
+            );
+            $had_cart_token = array_key_exists('HTTP_CART_TOKEN', $_SERVER);
+            $previous_cart_token = $_SERVER['HTTP_CART_TOKEN'] ?? null;
+            $_SERVER['HTTP_CART_TOKEN'] = $cart_token;
+            try {
+                $store_response = rest_do_request($store_request);
+            } finally {
+                if ($had_cart_token) {
+                    $_SERVER['HTTP_CART_TOKEN'] = $previous_cart_token;
+                } else {
+                    unset($_SERVER['HTTP_CART_TOKEN']);
+                }
+            }
+            self::$storefront_checkout_context = null;
+
+            if (is_wp_error($store_response)) {
+                return self::error('WooCommerce could not complete checkout. Please try again.', 502, 'storefront_checkout_failed');
+            }
+
+            $response_data = $store_response->get_data();
+            if ($store_response->get_status() >= 400) {
+                $error_code = is_array($response_data) && is_string($response_data['code'] ?? null)
+                    ? $response_data['code']
+                    : '';
+                if (in_array($error_code, array(
+                    'woocommerce_rest_product_partially_out_of_stock',
+                    'woocommerce_rest_product_out_of_stock',
+                    'woocommerce_rest_product_not_purchasable',
+                    'woocommerce_rest_product_too_many_in_cart',
+                ), true)) {
+                    error_log(wp_json_encode(array(
+                        'timestamp' => gmdate(DATE_ATOM),
+                        'event' => 'storefront_inventory_conflict',
+                        'reference_hash' => substr(hash('sha256', $reference), 0, 16),
+                        'code' => $error_code,
+                    )));
+                    return self::error(
+                        'Sorry, this product is no longer available in the requested quantity. Please update your cart and try again.',
+                        409,
+                        'insufficient_stock'
+                    );
+                }
+                return new WP_REST_Response($response_data, $store_response->get_status());
+            }
+
+            $checkout_result = is_array($response_data) ? ($response_data['payment_result'] ?? null) : null;
+            $order = is_array($response_data) ? wc_get_order(absint($response_data['order_id'] ?? 0)) : false;
+            if (!$order || !is_array($checkout_result)) {
+                return self::error('WooCommerce returned an incomplete checkout response.', 502, 'storefront_checkout_failed');
+            }
+
+            $order->update_meta_data(self::STOREFRONT_REFERENCE_META, $reference);
+            $order->update_meta_data(self::STOREFRONT_REQUEST_HASH_META, $request_hash);
+            $raw_payment_url = is_string($checkout_result['redirect_url'] ?? null)
+                ? $checkout_result['redirect_url']
+                : '';
+            $payment_url = esc_url_raw($raw_payment_url);
+            if ($payment_url) {
+                $order->update_meta_data(self::STOREFRONT_PAYMENT_URL_META, $payment_url);
+                $checkout_result['redirect_url'] = $payment_url;
+                $response_data['payment_result'] = $checkout_result;
+            }
+            $order->save_meta_data();
+            return self::success(array('checkout' => $response_data));
+        } catch (Throwable $error) {
+            error_log(wp_json_encode(array(
+                'timestamp' => gmdate(DATE_ATOM),
+                'event' => 'storefront_checkout_failed',
+                'reference_hash' => substr(hash('sha256', $reference), 0, 16),
+                'error_class' => get_class($error),
+            )));
+            return self::error('WooCommerce could not complete checkout. Please try again.', 502, 'storefront_checkout_failed');
+        } finally {
+            self::$storefront_checkout_context = null;
+            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock_name));
+        }
+    }
+
+    public static function tag_storefront_checkout_order($order, $order_object = null): void {
+        if (!$order instanceof WC_Order) {
+            $order = $order_object;
+        }
+        if (!self::$storefront_checkout_context || !$order instanceof WC_Order) {
+            return;
+        }
+        if (
+            self::$storefront_checkout_context['order_id'] &&
+            self::$storefront_checkout_context['order_id'] !== $order->get_id()
+        ) {
+            return;
+        }
+        self::$storefront_checkout_context['order_id'] = $order->get_id();
+        $order->update_meta_data(self::STOREFRONT_REFERENCE_META, self::$storefront_checkout_context['reference']);
+        $order->update_meta_data(self::STOREFRONT_REQUEST_HASH_META, self::$storefront_checkout_context['request_hash']);
+        $order->save_meta_data();
+    }
+
+    public static function hold_late_storefront_payment(string $status, int $order_id, $order): string {
+        if (
+            !$order instanceof WC_Order ||
+            !$order->get_meta(self::STOREFRONT_REFERENCE_META, true)
+        ) {
+            return $status;
+        }
+
+        if (
+            !$order->has_status(array('failed', 'cancelled', 'refunded')) &&
+            !$order->get_meta(self::STOREFRONT_LATE_PAYMENT_META, true)
+        ) {
+            return $status;
+        }
+        $order->update_meta_data(self::STOREFRONT_LATE_PAYMENT_META, '1');
+        $order->save_meta_data();
+        error_log(wp_json_encode(array(
+            'timestamp' => gmdate(DATE_ATOM),
+            'event' => 'late_storefront_payment_after_stock_hold_release',
+            'order_id' => $order_id,
+        )));
+        return 'on-hold';
+    }
+
+    public static function prevent_late_storefront_stock_reduction(bool $reduce, int $order_id): bool {
+        if (!$reduce) {
+            return false;
+        }
+        $order = wc_get_order($order_id);
+        return $order && $order->get_meta(self::STOREFRONT_LATE_PAYMENT_META, true) ? false : $reduce;
     }
 
     public static function register(WP_REST_Request $request): WP_REST_Response {

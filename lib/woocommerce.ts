@@ -54,6 +54,8 @@ type WooCheckoutAddress = {
   phone: string;
 };
 
+type WooShippingAddress = Omit<WooCheckoutAddress, "email">;
+
 export interface WooOrder {
   id: number;
   number: string;
@@ -390,15 +392,30 @@ interface StoreCheckoutResponse {
   };
 }
 
+export class WooCommerceStoreApiError extends Error {
+  constructor(
+    readonly path: string,
+    readonly code: string,
+    message: string,
+    readonly status: number,
+    readonly invalidParams: string[] = [],
+    readonly invalidAddressFields: string[] = [],
+  ) {
+    super(message);
+    this.name = "WooCommerceStoreApiError";
+  }
+}
+
 async function storeApiRequest<T>(
   config: NonNullable<ReturnType<typeof configuration>>,
   path: string,
-  options: { method?: "GET" | "POST"; cartToken?: string; body?: unknown } = {},
-): Promise<{ data: T; cartToken: string | null }> {
+  options: { method?: "GET" | "POST"; cartToken?: string; nonce?: string; body?: unknown } = {},
+): Promise<{ data: T; cartToken: string | null; nonce: string | null }> {
   const url = new URL(`${config.url}/wp-json/wc/store/v1${path}`);
   url.searchParams.set("_nc", `${Date.now()}${randomBytes(3).toString("hex")}`);
   const headers: Record<string, string> = { Accept: "application/json", "Cache-Control": "no-cache" };
   if (options.cartToken) headers["Cart-Token"] = options.cartToken;
+  if (options.nonce) headers.Nonce = options.nonce;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
 
   const response = await fetch(url, {
@@ -418,17 +435,42 @@ async function storeApiRequest<T>(
     }
   }
   if (!response.ok) {
-    const error = data as { message?: string } | null;
-    throw new Error(error?.message ?? `WooCommerce Store API request failed (${response.status}).`);
+    const error = data as {
+      code?: string;
+      message?: string;
+      data?: {
+        params?: Record<string, unknown>;
+        details?: Record<string, { data?: { params?: Record<string, unknown> } }>;
+      };
+    } | null;
+    const invalidAddressFields = ["billing_address", "shipping_address"].flatMap((address) =>
+      Object.keys(error?.data?.details?.[address]?.data?.params ?? {}).map(
+        (field) => `${address}.${field}`,
+      ),
+    );
+    throw new WooCommerceStoreApiError(
+      path,
+      error?.code ?? "",
+      error?.message ?? `WooCommerce Store API request failed (${response.status}).`,
+      response.status,
+      Object.keys(error?.data?.params ?? {}),
+      invalidAddressFields,
+    );
   }
-  return { data: data as T, cartToken: response.headers.get("cart-token") ?? options.cartToken ?? null };
+  return {
+    data: data as T,
+    cartToken: response.headers.get("cart-token") ?? options.cartToken ?? null,
+    nonce: response.headers.get("nonce") ?? options.nonce ?? null,
+  };
 }
 
 export async function submitWooCommerceCheckout(input: {
   items: Array<{ productId: string; quantity: number }>;
   billing: WooCheckoutAddress;
-  shipping: WooCheckoutAddress;
+  shipping: WooShippingAddress;
   customerNote: string;
+  idempotencyKey: string;
+  requestHash: string;
 }): Promise<StoreCheckoutResponse> {
   const config = configuration();
   if (!config) throw new Error("WooCommerce is not configured");
@@ -436,70 +478,125 @@ export async function submitWooCommerceCheckout(input: {
     throw new Error("WooCommerce checkout requires HTTPS");
   }
 
-  let { cartToken } = await storeApiRequest<StoreCartResponse>(config, "/cart");
+  let { cartToken, nonce } = await storeApiRequest<StoreCartResponse>(config, "/cart");
   if (!cartToken) throw new Error("WooCommerce did not provide a cart token.");
+  if (!nonce) throw new Error("WooCommerce did not provide a Store API nonce.");
 
   for (const item of input.items) {
-    ({ cartToken } = await storeApiRequest<StoreCartResponse>(config, "/cart/add-item", {
+    ({ cartToken, nonce } = await storeApiRequest<StoreCartResponse>(config, "/cart/add-item", {
       method: "POST",
       cartToken,
+      nonce,
       body: { id: Number(item.productId), quantity: item.quantity },
     }));
     if (!cartToken) throw new Error("WooCommerce did not return an updated cart token.");
+    if (!nonce) throw new Error("WooCommerce did not return an updated Store API nonce.");
   }
 
   let cartResponse = await storeApiRequest<StoreCartResponse>(config, "/cart/update-customer", {
     method: "POST",
     cartToken,
+    nonce,
     body: {
       billing_address: input.billing,
       shipping_address: input.shipping,
     },
   });
   cartToken = cartResponse.cartToken;
+  nonce = cartResponse.nonce;
   if (!cartToken) throw new Error("WooCommerce did not return an updated cart token.");
+  if (!nonce) throw new Error("WooCommerce did not return an updated Store API nonce.");
 
   const packages = cartResponse.data.shipping_rates ?? [];
-  for (const shippingPackage of packages) {
-    const rates = shippingPackage.shipping_rates ?? [];
-    const chosenRate = rates.find((rate) => rate.selected) ?? rates[0];
-    if (chosenRate && !chosenRate.selected) {
-      cartResponse = await storeApiRequest<StoreCartResponse>(config, "/cart/select-shipping-rate", {
-        method: "POST",
-        cartToken,
-        body: { package_id: shippingPackage.package_id, rate_id: chosenRate.rate_id },
-      });
-      cartToken = cartResponse.cartToken;
-      if (!cartToken) throw new Error("WooCommerce did not return an updated cart token.");
+  for (let index = 0; index < packages.length; index += 1) {
+    const shippingPackage = cartResponse.data.shipping_rates[index];
+    const rates = shippingPackage?.shipping_rates ?? [];
+    const chosenRate =
+      rates.find((rate) => rate.method_id === "free_shipping") ??
+      rates.find((rate) => rate.selected) ??
+      rates[0];
+    if (!chosenRate) {
+      throw new WooCommerceStoreApiError(
+        "/cart/select-shipping-rate",
+        "woocommerce_rest_invalid_shipping_option",
+        "WooCommerce has no available shipping rate for this address.",
+        400,
+      );
     }
+    cartResponse = await storeApiRequest<StoreCartResponse>(config, "/cart/select-shipping-rate", {
+      method: "POST",
+      cartToken,
+      nonce,
+      body: { package_id: shippingPackage.package_id, rate_id: chosenRate.rate_id },
+    });
+    cartToken = cartResponse.cartToken;
+    nonce = cartResponse.nonce;
+    if (!cartToken) throw new Error("WooCommerce did not return an updated cart token.");
+    if (!nonce) throw new Error("WooCommerce did not return an updated Store API nonce.");
   }
 
-  const result = await storeApiRequest<StoreCheckoutResponse>(config, "/checkout", {
+  const wordpressUrl = (process.env.WORDPRESS_URL || config.url).replace(/\/$/, "");
+  const proxySecret = process.env.ENGINEERPARTS_PROXY_SECRET;
+  if (!proxySecret || proxySecret.length < 32) {
+    throw new Error("The storefront checkout proxy is not configured");
+  }
+
+  const response = await fetch(`${wordpressUrl}/wp-json/engineerparts/v1/orders/checkout`, {
     method: "POST",
-    cartToken,
-    body: {
-      billing_address: input.billing,
-      shipping_address: input.shipping,
-      customer_note: input.customerNote,
-      payment_method: "nomod",
+    headers: {
+      "Content-Type": "application/json",
+      "X-EngineerParts-Proxy-Secret": proxySecret,
     },
+    body: JSON.stringify({
+      idempotencyKey: input.idempotencyKey,
+      requestHash: input.requestHash,
+      cartToken,
+      nonce,
+      checkout: {
+        billing_address: input.billing,
+        shipping_address: input.shipping,
+        customer_note: input.customerNote,
+        payment_method: "nomod",
+      },
+    }),
+    signal: AbortSignal.timeout(60_000),
+    cache: "no-store",
   });
-  if (result.data.payment_result?.redirect_url) {
+  const resultBody = (await response.json().catch(() => null)) as {
+    ok?: boolean;
+    checkout?: StoreCheckoutResponse;
+    code?: string;
+    message?: string;
+    error?: string;
+  } | null;
+  if (!response.ok) {
+    throw new WooCommerceStoreApiError(
+      "/checkout",
+      resultBody?.code ?? "",
+      resultBody?.message ?? resultBody?.error ?? `WooCommerce checkout failed (${response.status}).`,
+      response.status,
+    );
+  }
+  if (!resultBody?.ok || !resultBody.checkout?.payment_result) {
+    throw new Error("The checkout service returned an invalid response");
+  }
+  const checkout = resultBody.checkout;
+  if (checkout.payment_result.redirect_url) {
     try {
-      const target = new URL(result.data.payment_result.redirect_url);
+      const target = new URL(checkout.payment_result.redirect_url);
       if (
         target.protocol !== "https:" ||
         target.origin === new URL(config.url).origin ||
         target.username ||
         target.password
       ) {
-        result.data.payment_result.redirect_url = "";
+        checkout.payment_result.redirect_url = "";
       }
     } catch {
-      result.data.payment_result.redirect_url = "";
+      checkout.payment_result.redirect_url = "";
     }
   }
-  return result.data;
+  return checkout;
 }
 
 export interface WooCartQuote extends CartTotals {
@@ -653,7 +750,17 @@ export async function getWooCommerceCartQuote(
       body: JSON.stringify({ id: Number(item.productId), quantity: item.quantity }),
       cache: "no-store",
     });
-    if (!response.ok) throw new Error(`Unable to quote product ${item.productId}`);
+    if (!response.ok) {
+      const error: unknown = await response.json();
+      const code =
+        error && typeof error === "object" && "code" in error ? error.code : undefined;
+      if (response.status === 400 && code === "woocommerce_rest_product_partially_out_of_stock") {
+        const stock = stockLimits.find(({ productId }) => productId === item.productId);
+        if (stock) stock.maxQuantity = 0;
+        continue;
+      }
+      throw new Error(`Unable to quote product ${item.productId} (${response.status})`);
+    }
   }
 
   const response = await fetch(`${storeApi}/cart/update-customer`, {

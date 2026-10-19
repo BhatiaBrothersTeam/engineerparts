@@ -20,6 +20,7 @@ interface CartContextValue {
   setQuoteCountry: (country: string) => void;
   ready: boolean;
   stockValid: boolean;
+  refreshQuote: () => void;
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   removeItem: (productId: string) => void;
@@ -37,6 +38,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [quoteCountry, setQuoteCountry] = useState("AE");
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState(false);
+  const [quoteRevision, setQuoteRevision] = useState(0);
+  const refreshQuote = useCallback(() => setQuoteRevision((revision) => revision + 1), []);
 
   useEffect(() => {
     try {
@@ -114,7 +117,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
 
     return () => controller.abort();
-  }, [items, quoteCountry, ready]);
+  }, [items, quoteCountry, ready, quoteRevision]);
 
   const addItem = useCallback((item: Omit<CartItem, "quantity">, quantity = 1) => {
     setItems((current) => {
@@ -185,6 +188,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setQuoteCountry,
       ready,
       stockValid,
+      refreshQuote,
       addItem,
       updateQuantity,
       removeItem,
@@ -192,7 +196,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       quantityFor: (productId: string) =>
         items.find((line) => line.productId === productId)?.quantity ?? 0,
     };
-  }, [items, quote, quoteCountry, quoteLoading, quoteError, ready, addItem, updateQuantity, removeItem, clear]);
+  }, [items, quote, quoteCountry, quoteLoading, quoteError, ready, refreshQuote, addItem, updateQuantity, removeItem, clear]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

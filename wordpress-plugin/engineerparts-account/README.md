@@ -4,8 +4,9 @@ This plugin provides the restricted WordPress endpoints used by the EngineerPart
 
 ## Install
 
-1. Copy `engineerparts-account` to `wp-content/plugins/` on `https://shop.engineerparts.com`.
-2. Add these constants to `wp-config.php`, using the same randomly generated secret as the Next.js `ENGINEERPARTS_PROXY_SECRET` environment variable:
+1. In WordPress, go to **Plugins > Add New Plugin > Upload Plugin**, choose `engineerparts-customer-accounts-1.8.2.zip`, and install it. The ZIP contains a single `engineerparts-customer-accounts` plugin folder.
+2. If the older **EngineerParts Customer Accounts** plugin is already installed, deactivate it before activating this package. This package uses a new folder name to avoid WordPress failing while trying to replace a locked or non-writable plugin directory. Keep the old folder as a backup until the new plugin is activated and its API is verified; never run both copies at once.
+3. Add these constants to `wp-config.php`, using the same randomly generated secret as the Next.js `ENGINEERPARTS_PROXY_SECRET` environment variable:
 
    ```php
    define('ENGINEERPARTS_PROXY_SECRET', 'replace-with-at-least-32-random-characters');
@@ -15,13 +16,13 @@ This plugin provides the restricted WordPress endpoints used by the EngineerPart
 
    `ENGINEERPARTS_FRONTEND_URL` is also used to redirect customers to `{FRONTEND_URL}/checkout/success` after payment, in place of WooCommerce's default thank-you page.
 
-3. Activate **EngineerParts Customer Accounts** after WooCommerce.
-4. Confirm the `wp_engineerparts_sessions` and `wp_engineerparts_enquiries` tables were created. The prefix may differ from `wp_`.
-5. Configure and test WordPress transactional email before enabling registration in production.
+4. Activate **EngineerParts Customer Accounts** after WooCommerce.
+5. Confirm the `wp_engineerparts_sessions` and `wp_engineerparts_enquiries` tables were created. The prefix may differ from `wp_`.
+6. Configure and test WordPress transactional email before enabling registration in production.
 
-Updating from an earlier version only requires replacing the plugin folder and reactivating it if WordPress requests activation.
+After verifying the new plugin is active and `/wp-json/engineerparts/v1/` is available, remove the inactive old copy from **Plugins > Installed Plugins**. If WordPress cannot delete it, remove only its `wp-content/plugins/engineerparts-account` folder using the host file manager after confirming the new plugin works.
 
-Headless checkout submits orders through WooCommerce's Store API checkout endpoint and follows the gateway's `payment_result.redirect_url` directly. Confirm the Nomod gateway is enabled and its WooCommerce payment method ID is `nomod`.
+Headless checkout submits orders through WooCommerce's Store API checkout endpoint and follows the gateway's `payment_result.redirect_url` directly. The storefront forwards WooCommerce's current Store API nonce and cart token to the protected checkout proxy; the plugin restores the cart token to WordPress request context for WooCommerce to load the same cart. Do not disable WooCommerce nonce checks. Confirm the Nomod gateway is enabled and its WooCommerce payment method ID is `nomod`.
 
 Generate the shared secret with a password manager or `openssl rand -hex 32`. Never expose it through a `NEXT_PUBLIC_` variable.
 
@@ -48,7 +49,11 @@ No JWT plugin is required. Browser requests go only to Next.js, so WordPress COR
 - Unverified customers cannot sign in.
 - Every order lookup verifies that the authenticated customer owns the WooCommerce order.
 - Account checkout uses a five-minute, single-use payment handoff so WordPress can sign in the order owner and open the payment page. The resulting browser login expires within one hour. Customer passwords are never included in the handoff.
-- Headless order checkout uses the WooCommerce Store API so the configured gateway creates its normal payment result and redirect.
+- Headless order checkout is serialized by an idempotency key before the request is passed to WooCommerce's Store API. WooCommerce remains responsible for validating, reserving, reducing, and releasing stock; the storefront does not change product stock directly. Retries for the same checkout reuse the existing WooCommerce order instead of creating a second one.
+
+Enable **Manage stock** and set a real stock quantity on every inventory-limited product. In **WooCommerce > Settings > Products > Inventory**, set **Hold stock (minutes)** to a positive period appropriate for payment completion (60 minutes is a reasonable starting point). Keep WP-Cron/Action Scheduler running so expired unpaid orders are cancelled and their stock holds released. Do not set the hold period to zero if customers need time to complete hosted payment.
+
+If a verified payment callback arrives after WooCommerce has already failed or cancelled the storefront order (and released its hold), the plugin moves that order to **On hold** and suppresses stock reduction on future retries. Review the WooCommerce order and payment with Nomod/support before manually reconciling inventory or refunding it.
 - Enquiries are stored as structured rows in the `{$wpdb->prefix}engineerparts_enquiries` database table and linked to the WooCommerce customer ID.
 - Saved product IDs use the `engineerparts_saved_products` customer metadata key.
 - Existing WooCommerce customers are marked verified after their first successful password login; newly registered customers must verify by email. The storefront also accepts WooCommerce's native email confirmation when it matches the customer's current account email.
