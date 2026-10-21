@@ -12,11 +12,15 @@ export function brandSlug(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
+export function productsForBrand(products: Product[], slug: string): Product[] {
+  return products.filter((product) => brandSlug(product.brand) === slug);
+}
+
 export function brandsFromProducts(products: Product[]): Brand[] {
   return Array.from(new Set(products.map((product) => product.brand).filter((brand) => isPublicProductValue(brand, "brand"))))
     .sort((left, right) => left.localeCompare(right))
     .map((name) => {
-      const brandProducts = products.filter((product) => product.brand === name);
+      const brandProducts = productsForBrand(products, brandSlug(name));
       return {
         slug: brandSlug(name),
         name,

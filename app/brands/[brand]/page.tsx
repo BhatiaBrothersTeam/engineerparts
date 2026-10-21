@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { PageHero } from "@/components/ui/PageHero";
 import { ProductCard } from "@/components/cards/ProductCard";
 import { TrackView } from "@/components/TrackView";
-import { getBrand, brandSlug } from "@/lib/data/brands";
+import { getBrand, productsForBrand } from "@/lib/data/brands";
 import { formatNumber } from "@/lib/utils";
 import { getProducts } from "@/lib/woocommerce";
 
@@ -23,9 +23,7 @@ export default async function BrandPage({ params }: { params: { brand: string } 
   const brand = getBrand(products, params.brand);
   if (!brand) notFound();
 
-  const items = products.filter(
-    (p) => brandSlug(p.brand) === brand.slug || p.brand === brand.name || p.manufacturer.toLowerCase().includes(brand.name.toLowerCase()),
-  );
+  const items = productsForBrand(products, brand.slug);
 
   return (
     <>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PageHero } from "@/components/ui/PageHero";
 import { BrandCard } from "@/components/cards/BrandCard";
 import { TrackView } from "@/components/TrackView";
-import { brandsFromProducts } from "@/lib/data/brands";
+import { brandsFromProducts, productsForBrand } from "@/lib/data/brands";
 import { getProducts } from "@/lib/woocommerce";
 
 export const metadata: Metadata = {
@@ -31,7 +31,7 @@ export default async function BrandsPage() {
               <BrandCard
                 key={brand.slug}
                 brand={brand}
-                count={products.filter((p) => p.brand === brand.name).length}
+                count={productsForBrand(products, brand.slug).length}
               />
             ))}
           </div>

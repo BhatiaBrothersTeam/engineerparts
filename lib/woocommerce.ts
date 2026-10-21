@@ -24,6 +24,7 @@ type WooProduct = {
   stock_status: "instock" | "outofstock" | "onbackorder";
   date_created: string;
   categories: Array<{ name: string; slug: string }>;
+  brands?: Array<{ id: number; name: string; slug: string }>;
   images: Array<{ src: string }>;
   attributes: Array<{ name: string; options: string[] }>;
   meta_data: Array<{ key: string; value: unknown }>;
@@ -121,7 +122,7 @@ function mapProduct(product: WooProduct): Product {
   const manufacturer = [metadata(product, "manufacturer"), attribute(product, "Manufacturer")]
     .map((value) => text(value))
     .find((value) => isPublicProductValue(value)) ?? "";
-  const brand = [metadata(product, "brand"), attribute(product, "Brand"), manufacturer]
+  const brand = [product.brands?.[0]?.name, metadata(product, "brand"), attribute(product, "Brand"), manufacturer]
     .map((value) => text(value))
     .find((value) => isPublicProductValue(value, "brand")) ?? "";
   const warehouse = text(metadata(product, "warehouse_location"));
