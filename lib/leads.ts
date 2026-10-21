@@ -13,6 +13,7 @@ export interface LeadInput {
   budget?: string;
   message?: string;
   product_id?: string;
+  product_name?: string;
   sku?: string;
   part_number?: string;
   lot_id?: string;
@@ -70,6 +71,7 @@ export async function submitLead(input: LeadInput): Promise<Lead & { admin_email
     lead_id: makeLeadId(),
     lead_type: input.lead_type,
     product_id: input.product_id,
+    product_name: input.product_name,
     sku: input.sku,
     sku_or_part: input.sku,
     part_number: input.part_number,

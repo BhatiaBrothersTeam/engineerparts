@@ -49,7 +49,7 @@ export function Footer() {
               links={[
                 { label: "About", href: "/about" },
                 { label: "Contact", href: "/contact" },
-                { label: "My Enquiries", href: "/my-enquiries" },
+                { label: "Enquiry", href: "/enquiry" },
                 { label: "Cart", href: "/cart" },
                 { label: "Privacy Policy", href: "/privacy-policy" },
                 { label: "Terms & Conditions", href: "/terms" },

@@ -114,8 +114,8 @@ export function EnquiryModal() {
     event.preventDefault();
     setError(null);
 
-    if (!form.name.trim() || !form.email.trim() || !form.company.trim()) {
-      setError("Please provide your name, company and email address.");
+    if (!form.name.trim() || !form.email.trim() || !form.company.trim() || !form.phone.trim()) {
+      setError("Please provide your name, company, email and phone number.");
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
@@ -144,6 +144,7 @@ export function EnquiryModal() {
         country: form.country.trim(),
         quantity: mode === "product" || mode === "lot" || mode === "equipment" ? quantityWanted : undefined,
         budget: form.budget || undefined,
+        product_name: product?.name ?? lot?.name ?? unit?.name,
         message: [
           form.message,
           form.reference ? `Reference: ${form.reference}` : "",
@@ -151,7 +152,7 @@ export function EnquiryModal() {
           .filter(Boolean)
           .join("\n"),
         product_id: product?.id,
-        sku: product?.sku,
+        sku: product?.sku ?? lot?.lot_reference ?? unit?.reference,
         part_number: product?.part_number,
         lot_id: lot?.id,
         equipment_id: unit?.id,
@@ -227,8 +228,8 @@ export function EnquiryModal() {
               <button type="button" onClick={closeEnquiry} className="btn-navy btn-sm">
                 Close
               </button>
-              <a href="/my-enquiries" className="btn-outline btn-sm">
-                View my enquiries
+              <a href="/account/enquiries" className="btn-outline btn-sm">
+                View enquiries
               </a>
             </div>
           </div>
@@ -308,13 +309,14 @@ export function EnquiryModal() {
                   required
                 />
               </Field>
-              <Field label="Phone">
+              <Field label="Phone" required>
                 <input
                   type="tel"
                   className="field"
                   value={form.phone}
                   onChange={(e) => update("phone", e.target.value)}
                   placeholder="+44 ..."
+                  required
                 />
               </Field>
               <Field label="Country">

@@ -4,7 +4,7 @@ This plugin provides the restricted WordPress endpoints used by the EngineerPart
 
 ## Install
 
-1. In WordPress, go to **Plugins > Add New Plugin > Upload Plugin**, choose `engineerparts-customer-accounts-1.8.2.zip`, and install it. The ZIP contains a single `engineerparts-customer-accounts` plugin folder.
+1. In WordPress, go to **Plugins > Add New Plugin > Upload Plugin**, choose `engineerparts-customer-accounts-1.8.5.zip`, and install it. The ZIP contains a single `engineerparts-customer-accounts` plugin folder.
 2. If the older **EngineerParts Customer Accounts** plugin is already installed, deactivate it before activating this package. This package uses a new folder name to avoid WordPress failing while trying to replace a locked or non-writable plugin directory. Keep the old folder as a backup until the new plugin is activated and its API is verified; never run both copies at once.
 3. Add these constants to `wp-config.php`, using the same randomly generated secret as the Next.js `ENGINEERPARTS_PROXY_SECRET` environment variable:
 
@@ -17,7 +17,7 @@ This plugin provides the restricted WordPress endpoints used by the EngineerPart
    `ENGINEERPARTS_FRONTEND_URL` is also used to redirect customers to `{FRONTEND_URL}/checkout/success` after payment, in place of WooCommerce's default thank-you page.
 
 4. Activate **EngineerParts Customer Accounts** after WooCommerce.
-5. Confirm the `wp_engineerparts_sessions` and `wp_engineerparts_enquiries` tables were created. The prefix may differ from `wp_`.
+5. Confirm the `wp_engineerparts_sessions`, `wp_engineerparts_enquiries`, `wp_engineerparts_contacts`, and `wp_engineerparts_clearance_alerts` tables were created. The prefix may differ from `wp_`.
 6. Configure and test WordPress transactional email before enabling registration in production.
 
 After verifying the new plugin is active and `/wp-json/engineerparts/v1/` is available, remove the inactive old copy from **Plugins > Installed Plugins**. If WordPress cannot delete it, remove only its `wp-content/plugins/engineerparts-account` folder using the host file manager after confirming the new plugin works.
@@ -54,7 +54,8 @@ No JWT plugin is required. Browser requests go only to Next.js, so WordPress COR
 Enable **Manage stock** and set a real stock quantity on every inventory-limited product. In **WooCommerce > Settings > Products > Inventory**, set **Hold stock (minutes)** to a positive period appropriate for payment completion (60 minutes is a reasonable starting point). Keep WP-Cron/Action Scheduler running so expired unpaid orders are cancelled and their stock holds released. Do not set the hold period to zero if customers need time to complete hosted payment.
 
 If a verified payment callback arrives after WooCommerce has already failed or cancelled the storefront order (and released its hold), the plugin moves that order to **On hold** and suppresses stock reduction on future retries. Review the WooCommerce order and payment with Nomod/support before manually reconciling inventory or refunding it.
-- Enquiries are stored as structured rows in the `{$wpdb->prefix}engineerparts_enquiries` database table and linked to the WooCommerce customer ID.
+- Product, lot, and equipment enquiries are stored in `{$wpdb->prefix}engineerparts_enquiries`; general contact messages are stored separately in `{$wpdb->prefix}engineerparts_contacts`. Both tables link submissions to a WooCommerce customer ID when the sender is signed in.
+- Clearance alert email registrations are stored separately in `{$wpdb->prefix}engineerparts_clearance_alerts`. Automated stock-alert emails are not implemented yet.
 - Saved product IDs use the `engineerparts_saved_products` customer metadata key.
 - Existing WooCommerce customers are marked verified after their first successful password login; newly registered customers must verify by email. The storefront also accepts WooCommerce's native email confirmation when it matches the customer's current account email.
 
@@ -62,6 +63,8 @@ If a verified payment callback arrives after WooCommerce has already failed or c
 
 The plugin exposes controlled routes under `/wp-json/engineerparts/v1/` for authentication, profile and address updates, password changes, customer-owned orders and payment handoffs, headless checkout payment redirects, reorder validation, enquiries, and saved products. Every route requires the server-to-server proxy secret. Customer routes additionally require a valid opaque session token.
 
-Guest enquiry submission is proxied by Next.js and rate-limited. Enquiries are listed under **WooCommerce > EngineerParts Enquiries**. Open a reference to view, edit, or permanently delete that database row. Editing requires a name and valid email address; status can be set to Submitted, Reviewing, Responded, or Closed. On upgrade, the plugin copies existing `ep_enquiry` posts into the database table without deleting the originals. The submitted details are emailed to the WordPress admin email configured under **Settings > General** and to the customer. Guest enquiries can be claimed after login only when both the stored RFQ reference and verified account email match.
+Guest submissions are proxied by Next.js and rate-limited. Product, lot, and equipment enquiries require a phone number and are stored in `{$wpdb->prefix}engineerparts_enquiries`; general contact messages also require a phone number and are stored in `{$wpdb->prefix}engineerparts_contacts`; clearance-alert signups are stored in `{$wpdb->prefix}engineerparts_clearance_alerts`. All three appear in separate sections under the single **WooCommerce > EngineerParts Enquiries** admin page. Listing-enquiry records can be viewed, edited, and deleted; contact messages and alert subscribers can be viewed. On upgrade, the plugin copies existing `ep_enquiry` posts into the listing-enquiry table without deleting the originals, and migrates legacy contact and alert records into their separate tables. The submitted details are emailed to the WordPress admin email configured under **Settings > General** and to the customer for contact/listing enquiries. Clearance-alert emails are not yet sent. Guest listing enquiries can be claimed after login only when both the stored RFQ reference and verified account email match.
 
 Configure and test WordPress email delivery (preferably authenticated SMTP) and set the correct site email under **Settings > General**. Enquiry records are still saved if email delivery fails; WordPress logs mail failures and the storefront tells the customer their enquiry was saved but a notification could not be sent. Email verification and password reset also depend on working WordPress email delivery.
+
+Account verification, password reset, contact confirmation, and listing-enquiry emails use a responsive EngineerParts HTML layout with the storefront's black, red, and neutral colors. WooCommerce transactional emails use the same brand colors. Clearance-alert signups are stored for future use but do not send alert emails yet.

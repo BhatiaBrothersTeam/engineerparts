@@ -17,7 +17,16 @@ interface EnquiryResponse {
 function validLead(value: unknown): value is Partial<Lead> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const lead = value as Partial<Lead>;
-  return Boolean(lead.lead_type && lead.contact?.trim() && lead.email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lead.email) && (!lead.message || lead.message.length <= 5000));
+  const requiresBusinessContact = ["general_contact", "product_enquiry", "whole_lot_enquiry", "equipment_enquiry"].includes(lead.lead_type ?? "");
+  return Boolean(
+    lead.lead_type &&
+      lead.contact?.trim() &&
+      lead.email?.trim() &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lead.email) &&
+      (!requiresBusinessContact || (lead.company?.trim() && lead.phone?.trim())) &&
+      (lead.lead_type !== "general_contact" || lead.message?.trim()) &&
+      (!lead.message || lead.message.length <= 5000),
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -25,7 +34,7 @@ export async function POST(request: NextRequest) {
   if (Number(request.headers.get("content-length") ?? 0) > 32_768) return NextResponse.json({ ok: false, error: "Request is too large." }, { status: 413 });
   let payload: unknown;
   try { payload = await request.json(); } catch { return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 }); }
-  if (!validLead(payload)) return NextResponse.json({ ok: false, error: "Please provide a valid name and email address." }, { status: 422 });
+  if (!validLead(payload)) return NextResponse.json({ ok: false, error: "Please complete the required fields, including a valid email and phone number for contact or listing enquiries." }, { status: 422 });
   const result = await wordpressAccountRequest<EnquiryResponse>("enquiries", {
     method: "POST", body: payload, token: request.cookies.get(SESSION_COOKIE)?.value,
     clientIp: (request.headers.get("x-forwarded-for")?.split(",")[0] ?? request.ip ?? "unknown").trim(),

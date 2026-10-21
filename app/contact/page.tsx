@@ -6,7 +6,7 @@ import { CONTACT_EMAIL, CONTACT_PHONE, WHATSAPP_NUMBER, whatsappLink } from "@/l
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Contact the Engineerparts.com clearance desk. Product, lot and equipment enquiries and bulk requirements.",
+    "Contact the Engineerparts.com team with a general question or request.",
 };
 
 export default function ContactPage() {
@@ -16,7 +16,7 @@ export default function ContactPage() {
         breadcrumbs={[{ label: "Contact" }]}
         eyebrow="Clearance desk"
         title="Talk to Engineerparts.com"
-        description="Send a professional enquiry for a product, lot, equipment unit or bulk requirement. We respond during the next working day."
+        description="Send our team a general message. For a specific product, lot or equipment request, use the enquiry option on its listing."
       />
 
       <section className="section">
@@ -27,7 +27,7 @@ export default function ContactPage() {
               {CONTACT_EMAIL ? <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> : null}
               {CONTACT_PHONE ? <a className="underline" href={`tel:${CONTACT_PHONE}`}>{CONTACT_PHONE}</a> : null}
               {WHATSAPP_NUMBER ? <a className="underline" href={whatsappLink("Hello Engineerparts.com")} target="_blank" rel="noopener noreferrer">WhatsApp</a> : null}
-              {!CONTACT_EMAIL && !CONTACT_PHONE && !WHATSAPP_NUMBER ? <span className="text-steel-600">Use the enquiry form below to reach our team.</span> : null}
+              {!CONTACT_EMAIL && !CONTACT_PHONE && !WHATSAPP_NUMBER ? <span className="text-steel-600">Use the contact form below to reach our team.</span> : null}
             </div>
           </div>
           <ContactForm />

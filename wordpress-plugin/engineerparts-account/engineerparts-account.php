@@ -2,7 +2,7 @@
 /**
  * Plugin Name: EngineerParts Customer Accounts
  * Description: Secure customer authentication endpoints for the EngineerParts storefront.
- * Version: 1.8.2
+ * Version: 1.8.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
  */
@@ -34,18 +34,94 @@ final class EngineerParts_Customer_Accounts {
         add_action('plugins_loaded', array(self::class, 'maybe_install_enquiries_table'), 1);
         add_action('init', array(self::class, 'register_legacy_enquiry_type'), 0);
         add_action('init', array(self::class, 'maybe_migrate_legacy_enquiries'), 1);
+        add_action('init', array(self::class, 'maybe_migrate_legacy_contacts'), 2);
+        add_action('init', array(self::class, 'maybe_migrate_clearance_alert_signups'), 3);
         add_action('admin_menu', array(self::class, 'register_enquiries_admin_page'));
         add_action('admin_post_engineerparts_update_enquiry', array(self::class, 'update_enquiry_admin'));
         add_action('admin_post_engineerparts_delete_enquiry', array(self::class, 'delete_enquiry_admin'));
         add_action('admin_post_engineerparts_payment_handoff', array(self::class, 'payment_handoff'));
         add_action('admin_post_nopriv_engineerparts_payment_handoff', array(self::class, 'payment_handoff'));
         add_action('rest_api_init', array(self::class, 'register_routes'));
+        add_filter('woocommerce_email_styles', array(self::class, 'woocommerce_email_styles'), 10, 2);
         add_action('woocommerce_new_order', array(self::class, 'tag_storefront_checkout_order'), 10, 2);
         add_action('woocommerce_store_api_checkout_order_processed', array(self::class, 'tag_storefront_checkout_order'));
         add_filter('woocommerce_payment_complete_order_status', array(self::class, 'hold_late_storefront_payment'), 10, 3);
         add_filter('woocommerce_payment_complete_reduce_order_stock', array(self::class, 'prevent_late_storefront_stock_reduction'), 10, 2);
         add_action('engineerparts_purge_sessions', array(self::class, 'purge_sessions'));
         add_filter('woocommerce_get_checkout_order_received_url', array(self::class, 'order_received_url'), 10, 2);
+    }
+
+    public static function maybe_migrate_legacy_contacts(): void {
+        global $wpdb;
+        if (get_option('engineerparts_contacts_migrated_v1') === '1') {
+            return;
+        }
+        $source = self::enquiries_table();
+        $target = self::contacts_table();
+        $source_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($source)));
+        $target_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($target)));
+        if ($source_exists !== $source || $target_exists !== $target) {
+            return;
+        }
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$source} WHERE lead_type = %s ORDER BY id ASC",
+            'general_contact'
+        ), ARRAY_A);
+        if ($rows === null) {
+            error_log(wp_json_encode(array(
+                'timestamp' => gmdate(DATE_ATOM),
+                'endpoint' => 'contacts',
+                'category' => 'legacy_migration_query_failed',
+                'databaseError' => $wpdb->last_error,
+            )));
+            return;
+        }
+        foreach ($rows ?: array() as $row) {
+            $reference = (string) $row['enquiry_reference'];
+            if ($reference === '') {
+                $reference = 'EP-LEGACY-CONTACT-' . (int) $row['id'];
+            }
+            $exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$target} WHERE contact_reference = %s",
+                $reference
+            ));
+            if (!$exists && $wpdb->insert($target, array(
+                'contact_reference' => $reference,
+                'customer_id' => (int) $row['customer_id'],
+                'topic' => (string) $row['enquiry_type'],
+                'reference' => (string) $row['sku'],
+                'message' => (string) $row['message'],
+                'company' => (string) $row['company'],
+                'contact' => (string) $row['contact'],
+                'email' => (string) $row['email'],
+                'phone' => (string) $row['phone'],
+                'country' => (string) $row['country'],
+                'status' => (string) $row['status'],
+                'source' => (string) $row['source'],
+                'created_at' => (string) $row['created_at'],
+                'updated_at' => (string) $row['updated_at'],
+            )) === false) {
+                error_log(wp_json_encode(array(
+                    'timestamp' => gmdate(DATE_ATOM),
+                    'endpoint' => 'contacts',
+                    'category' => 'legacy_migration_failed',
+                    'enquiryId' => (int) $row['id'],
+                    'databaseError' => $wpdb->last_error,
+                )));
+                return;
+            }
+            if ($wpdb->delete($source, array('id' => (int) $row['id']), array('%d')) === false) {
+                error_log(wp_json_encode(array(
+                    'timestamp' => gmdate(DATE_ATOM),
+                    'endpoint' => 'contacts',
+                    'category' => 'legacy_migration_cleanup_failed',
+                    'enquiryId' => (int) $row['id'],
+                    'databaseError' => $wpdb->last_error,
+                )));
+                return;
+            }
+        }
+        update_option('engineerparts_contacts_migrated_v1', '1');
     }
 
     public static function activate(): void {
@@ -67,7 +143,15 @@ final class EngineerParts_Customer_Accounts {
             KEY expires_at (expires_at)
         ) {$charset};");
 
-        self::install_enquiries_table();
+        if (self::install_enquiries_table()) {
+            update_option('engineerparts_enquiries_schema_version', '1.4.0');
+        }
+        if (self::install_contacts_table()) {
+            update_option('engineerparts_contacts_db_version', '1.0.0');
+        }
+        if (self::install_clearance_alerts_table()) {
+            update_option('engineerparts_clearance_alerts_db_version', '1.0.0');
+        }
 
         if (!wp_next_scheduled('engineerparts_purge_sessions')) {
             wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'engineerparts_purge_sessions');
@@ -102,16 +186,34 @@ final class EngineerParts_Customer_Accounts {
         self::route('/account/saved-products', 'GET', 'saved_products');
         self::route('/account/saved-products', 'POST', 'toggle_saved_product');
         self::route('/enquiries', 'POST', 'submit_enquiry');
+        self::route('/clearance-alerts', 'POST', 'subscribe_clearance_alerts');
     }
 
     public static function maybe_install_enquiries_table(): void {
-        if (get_option('engineerparts_enquiries_db_version') === '1.3.0') {
-            return;
-        }
-        if (!self::install_enquiries_table()) {
+        if (get_option('engineerparts_enquiries_schema_version') !== '1.4.0' && self::install_enquiries_table()) {
+            update_option('engineerparts_enquiries_schema_version', '1.4.0');
+        } elseif (get_option('engineerparts_enquiries_schema_version') !== '1.4.0') {
             error_log(wp_json_encode(array(
                 'timestamp' => gmdate(DATE_ATOM),
                 'endpoint' => 'enquiries',
+                'category' => 'table_install_failed',
+            )));
+        }
+        if (get_option('engineerparts_clearance_alerts_db_version') !== '1.0.0' && self::install_clearance_alerts_table()) {
+            update_option('engineerparts_clearance_alerts_db_version', '1.0.0');
+        } elseif (get_option('engineerparts_clearance_alerts_db_version') !== '1.0.0') {
+            error_log(wp_json_encode(array(
+                'timestamp' => gmdate(DATE_ATOM),
+                'endpoint' => 'clearance-alerts',
+                'category' => 'table_install_failed',
+            )));
+        }
+        if (get_option('engineerparts_contacts_db_version') !== '1.0.0' && self::install_contacts_table()) {
+            update_option('engineerparts_contacts_db_version', '1.0.0');
+        } elseif (get_option('engineerparts_contacts_db_version') !== '1.0.0') {
+            error_log(wp_json_encode(array(
+                'timestamp' => gmdate(DATE_ATOM),
+                'endpoint' => 'contacts',
                 'category' => 'table_install_failed',
             )));
         }
@@ -149,7 +251,12 @@ final class EngineerParts_Customer_Accounts {
             product_id bigint unsigned NOT NULL DEFAULT 0,
             product_name text NOT NULL,
             sku varchar(191) NOT NULL DEFAULT '',
+            part_number varchar(191) NOT NULL DEFAULT '',
+            lot_id varchar(191) NOT NULL DEFAULT '',
+            equipment_id varchar(191) NOT NULL DEFAULT '',
+            listing_url text NOT NULL,
             requested_quantity int unsigned NOT NULL DEFAULT 0,
+            budget varchar(191) NOT NULL DEFAULT '',
             message text NOT NULL,
             company varchar(191) NOT NULL DEFAULT '',
             contact varchar(191) NOT NULL DEFAULT '',
@@ -162,6 +269,113 @@ final class EngineerParts_Customer_Accounts {
             updated_at varchar(35) NOT NULL DEFAULT '',
             PRIMARY KEY  (id),
             UNIQUE KEY enquiry_reference (enquiry_reference),
+            KEY customer_id (customer_id),
+            KEY email (email),
+            KEY created_at (created_at)
+        ) {$charset};");
+        return $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($table))) === $table;
+    }
+
+    private static function install_clearance_alerts_table(): bool {
+        global $wpdb;
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        $table = self::clearance_alerts_table();
+        $charset = $wpdb->get_charset_collate();
+        dbDelta("CREATE TABLE {$table} (
+            id bigint unsigned NOT NULL AUTO_INCREMENT,
+            email varchar(191) NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'subscribed',
+            source varchar(100) NOT NULL DEFAULT 'web',
+            created_at datetime NOT NULL,
+            updated_at datetime NOT NULL,
+            PRIMARY KEY  (id),
+            UNIQUE KEY email (email),
+            KEY status (status)
+        ) {$charset};");
+        return $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($table))) === $table;
+    }
+
+    public static function maybe_migrate_clearance_alert_signups(): void {
+        global $wpdb;
+        if (get_option('engineerparts_clearance_alerts_migrated_v1') === '1') {
+            return;
+        }
+        $source = self::enquiries_table();
+        $target = self::clearance_alerts_table();
+        $source_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($source)));
+        $target_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($target)));
+        if ($source_exists !== $source || $target_exists !== $target) {
+            return;
+        }
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT email, source, created_at, updated_at FROM {$source} WHERE lead_type = %s",
+            'clearance_alert'
+        ), ARRAY_A);
+        if ($rows === null) {
+            error_log(wp_json_encode(array(
+                'timestamp' => gmdate(DATE_ATOM),
+                'endpoint' => 'clearance-alerts',
+                'category' => 'legacy_migration_query_failed',
+                'databaseError' => $wpdb->last_error,
+            )));
+            return;
+        }
+        foreach ($rows ?: array() as $row) {
+            $email = strtolower(sanitize_email($row['email']));
+            if (!is_email($email) || strlen($email) > 191) {
+                continue;
+            }
+            $exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$target} WHERE email = %s",
+                $email
+            ));
+            if ($exists) {
+                continue;
+            }
+            $created_at = strtotime($row['created_at']) ? gmdate('Y-m-d H:i:s', strtotime($row['created_at'])) : current_time('mysql', true);
+            $updated_at = strtotime($row['updated_at']) ? gmdate('Y-m-d H:i:s', strtotime($row['updated_at'])) : $created_at;
+            if ($wpdb->insert($target, array(
+                'email' => $email,
+                'status' => 'subscribed',
+                'source' => sanitize_key($row['source'] ?: 'legacy'),
+                'created_at' => $created_at,
+                'updated_at' => $updated_at,
+            )) === false) {
+                error_log(wp_json_encode(array(
+                    'timestamp' => gmdate(DATE_ATOM),
+                    'endpoint' => 'clearance-alerts',
+                    'category' => 'legacy_migration_failed',
+                    'databaseError' => $wpdb->last_error,
+                )));
+                return;
+            }
+        }
+        update_option('engineerparts_clearance_alerts_migrated_v1', '1');
+    }
+
+    private static function install_contacts_table(): bool {
+        global $wpdb;
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        $table = self::contacts_table();
+        $charset = $wpdb->get_charset_collate();
+        dbDelta("CREATE TABLE {$table} (
+            id bigint unsigned NOT NULL AUTO_INCREMENT,
+            contact_reference varchar(40) DEFAULT NULL,
+            customer_id bigint unsigned NOT NULL DEFAULT 0,
+            topic varchar(100) NOT NULL DEFAULT '',
+            reference varchar(191) NOT NULL DEFAULT '',
+            message text NOT NULL,
+            company varchar(191) NOT NULL DEFAULT '',
+            contact varchar(191) NOT NULL DEFAULT '',
+            email varchar(191) NOT NULL DEFAULT '',
+            phone varchar(100) NOT NULL DEFAULT '',
+            country varchar(100) NOT NULL DEFAULT '',
+            status varchar(40) NOT NULL DEFAULT 'submitted',
+            source varchar(100) NOT NULL DEFAULT 'web',
+            created_at varchar(35) NOT NULL DEFAULT '',
+            updated_at varchar(35) NOT NULL DEFAULT '',
+            PRIMARY KEY  (id),
+            UNIQUE KEY contact_reference (contact_reference),
             KEY customer_id (customer_id),
             KEY email (email),
             KEY created_at (created_at)
@@ -196,7 +410,12 @@ final class EngineerParts_Customer_Accounts {
                 'product_id' => (int) get_post_meta($post->ID, 'product_id', true),
                 'product_name' => (string) get_post_meta($post->ID, 'product_name', true),
                 'sku' => (string) get_post_meta($post->ID, 'sku', true),
+                'part_number' => (string) get_post_meta($post->ID, 'part_number', true),
+                'lot_id' => (string) get_post_meta($post->ID, 'lot_id', true),
+                'equipment_id' => (string) get_post_meta($post->ID, 'equipment_id', true),
+                'listing_url' => (string) get_post_meta($post->ID, 'listing_url', true),
                 'requested_quantity' => (int) get_post_meta($post->ID, 'requested_quantity', true),
+                'budget' => (string) get_post_meta($post->ID, 'budget', true),
                 'message' => (string) get_post_meta($post->ID, 'message', true),
                 'company' => (string) get_post_meta($post->ID, 'company', true),
                 'contact' => (string) get_post_meta($post->ID, 'contact', true),
@@ -238,9 +457,9 @@ final class EngineerParts_Customer_Accounts {
             wp_die(esc_html__('You do not have permission to view enquiries.', 'engineerparts'));
         }
         global $wpdb;
-        $table = self::enquiries_table();
         $reference = isset($_GET['reference']) ? sanitize_text_field(wp_unslash($_GET['reference'])) : '';
-        echo '<div class="wrap"><h1>EngineerParts Enquiries</h1>';
+        $kind = isset($_GET['type']) ? sanitize_key(wp_unslash($_GET['type'])) : 'enquiry';
+        echo '<div class="wrap"><h1>EngineerParts Leads</h1>';
         $notice = isset($_GET['notice']) ? sanitize_key(wp_unslash($_GET['notice'])) : '';
         if ($notice === 'saved') {
             echo '<div class="notice notice-success is-dismissible"><p>Enquiry updated.</p></div>';
@@ -252,45 +471,118 @@ final class EngineerParts_Customer_Accounts {
             echo '<div class="notice notice-error"><p>Unable to update or delete the enquiry. Please try again.</p></div>';
         }
         if ($reference !== '') {
-            $enquiry = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE enquiry_reference = %s", $reference), ARRAY_A);
+            $is_contact = $kind === 'contact';
+            $is_clearance_alert = $kind === 'clearance-alert';
+            if ($is_clearance_alert) {
+                $enquiry = $wpdb->get_row($wpdb->prepare(
+                    'SELECT * FROM ' . self::clearance_alerts_table() . ' WHERE id = %d',
+                    absint($reference)
+                ), ARRAY_A);
+            } else {
+                $table = $is_contact ? self::contacts_table() : self::enquiries_table();
+                $reference_column = $is_contact ? 'contact_reference' : 'enquiry_reference';
+                $enquiry = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE {$reference_column} = %s", $reference), ARRAY_A);
+            }
             if (!$enquiry) {
-                echo '<p>Enquiry not found.</p>';
-            } elseif (isset($_GET['edit']) && $_GET['edit'] === '1') {
+                echo '<p>Submission not found.</p>';
+            } elseif (!$is_contact && !$is_clearance_alert && isset($_GET['edit']) && $_GET['edit'] === '1') {
                 self::render_enquiry_edit_form($enquiry);
             } else {
-                echo '<p><a href="' . esc_url(admin_url('admin.php?page=engineerparts-enquiries')) . '">&larr; All enquiries</a></p>';
-                echo '<p><a class="button button-primary" href="' . esc_url(add_query_arg(
-                    array('page' => 'engineerparts-enquiries', 'reference' => $reference, 'edit' => '1'),
+                $detail_kind = $is_clearance_alert ? 'clearance-alert' : ($is_contact ? 'contact' : 'enquiry');
+                $back_label = $is_clearance_alert ? 'clearance alert subscribers' : ($is_contact ? 'contact submissions' : 'listing enquiries');
+                echo '<p><a href="' . esc_url(add_query_arg(
+                    array('page' => 'engineerparts-enquiries', 'type' => $detail_kind),
                     admin_url('admin.php')
-                )) . '">Edit enquiry</a></p>';
+                )) . '">&larr; All ' . esc_html($back_label) . '</a></p>';
+                if (!$is_contact && !$is_clearance_alert) {
+                    echo '<p><a class="button button-primary" href="' . esc_url(add_query_arg(
+                        array('page' => 'engineerparts-enquiries', 'type' => 'enquiry', 'reference' => $reference, 'edit' => '1'),
+                        admin_url('admin.php')
+                    )) . '">Edit enquiry</a></p>';
+                }
                 echo '<table class="widefat striped"><tbody>';
-                $labels = array(
+                $labels = $is_clearance_alert ? array(
+                    'email' => 'Email', 'status' => 'Status', 'source' => 'Source',
+                    'created_at' => 'Subscribed', 'updated_at' => 'Last updated',
+                ) : ($is_contact ? array(
+                    'contact_reference' => 'Reference', 'topic' => 'Topic', 'contact' => 'Name', 'company' => 'Company',
+                    'email' => 'Email', 'phone' => 'Phone', 'country' => 'Country',
+                    'reference' => 'Product reference', 'message' => 'Message', 'status' => 'Status',
+                    'source' => 'Source', 'created_at' => 'Submitted',
+                ) : array(
                     'enquiry_reference' => 'Reference', 'enquiry_type' => 'Enquiry type',
                     'contact' => 'Name', 'company' => 'Company', 'email' => 'Email',
                     'phone' => 'Phone', 'country' => 'Country', 'product_name' => 'Product',
-                    'sku' => 'Product / SKU / Lot reference', 'requested_quantity' => 'Quantity',
-                    'message' => 'Message', 'status' => 'Status', 'created_at' => 'Submitted',
-                );
+                    'sku' => 'Product / SKU / Lot reference', 'part_number' => 'Part number',
+                    'lot_id' => 'Lot ID', 'equipment_id' => 'Equipment ID',
+                    'requested_quantity' => 'Quantity', 'budget' => 'Budget / target price',
+                    'listing_url' => 'Listing URL', 'message' => 'Message',
+                    'status' => 'Status', 'created_at' => 'Submitted',
+                ));
                 foreach ($labels as $key => $label) {
                     $value = (string) $enquiry[$key];
                     echo '<tr><th scope="row">' . esc_html($label) . '</th><td>' . nl2br(esc_html($value)) . '</td></tr>';
                 }
                 echo '</tbody></table>';
-                echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin-top:16px" onsubmit="return confirm(\'Permanently delete this enquiry?\')">';
-                echo '<input type="hidden" name="action" value="engineerparts_delete_enquiry">';
-                echo '<input type="hidden" name="reference" value="' . esc_attr($reference) . '">';
-                wp_nonce_field('engineerparts_delete_enquiry_' . $reference);
-                echo '<button type="submit" class="button button-link-delete">Delete enquiry</button></form>';
+                if (!$is_contact && !$is_clearance_alert) {
+                    echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin-top:16px" onsubmit="return confirm(\'Permanently delete this enquiry?\')">';
+                    echo '<input type="hidden" name="action" value="engineerparts_delete_enquiry">';
+                    echo '<input type="hidden" name="reference" value="' . esc_attr($reference) . '">';
+                    wp_nonce_field('engineerparts_delete_enquiry_' . $reference);
+                    echo '<button type="submit" class="button button-link-delete">Delete enquiry</button></form>';
+                }
             }
         } else {
-            $enquiries = $wpdb->get_results("SELECT * FROM {$table} ORDER BY id DESC LIMIT 100", ARRAY_A);
+            $enquiry_table = self::enquiries_table();
+            $contact_table = self::contacts_table();
+            $clearance_alert_table = self::clearance_alerts_table();
+            $enquiries = $wpdb->get_results("SELECT * FROM {$enquiry_table} ORDER BY id DESC LIMIT 100", ARRAY_A);
+            $contacts = $wpdb->get_results("SELECT * FROM {$contact_table} ORDER BY id DESC LIMIT 100", ARRAY_A);
+            $clearance_alerts = $wpdb->get_results("SELECT * FROM {$clearance_alert_table} ORDER BY id DESC LIMIT 100", ARRAY_A);
+            echo '<h2>Contact submissions</h2>';
+            if (!$contacts) {
+                echo '<p>No contact messages have been submitted.</p>';
+            } else {
+                echo '<table class="widefat striped"><thead><tr><th>Reference</th><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Submitted</th></tr></thead><tbody>';
+                foreach ($contacts as $contact) {
+                    $url = add_query_arg(
+                        array('page' => 'engineerparts-enquiries', 'type' => 'contact', 'reference' => $contact['contact_reference']),
+                        admin_url('admin.php')
+                    );
+                    echo '<tr><td><a href="' . esc_url($url) . '">' . esc_html($contact['contact_reference']) . '</a></td>';
+                    echo '<td>' . esc_html($contact['contact']) . '</td><td>' . esc_html($contact['company']) . '</td>';
+                    echo '<td>' . esc_html($contact['email']) . '</td><td>' . esc_html($contact['phone']) . '</td>';
+                    echo '<td>' . esc_html($contact['created_at']) . '</td></tr>';
+                }
+                echo '</tbody></table>';
+            }
+
+            echo '<h2 style="margin-top:32px">Clearance alert subscribers</h2>';
+            if (!$clearance_alerts) {
+                echo '<p>No clearance alert signups have been submitted.</p>';
+            } else {
+                echo '<table class="widefat striped"><thead><tr><th>Email</th><th>Status</th><th>Source</th><th>Subscribed</th></tr></thead><tbody>';
+                foreach ($clearance_alerts as $subscriber) {
+                    $url = add_query_arg(
+                        array('page' => 'engineerparts-enquiries', 'type' => 'clearance-alert', 'reference' => $subscriber['id']),
+                        admin_url('admin.php')
+                    );
+                    echo '<tr><td><a href="' . esc_url($url) . '">' . esc_html($subscriber['email']) . '</a></td>';
+                    echo '<td>' . esc_html(ucfirst($subscriber['status'])) . '</td>';
+                    echo '<td>' . esc_html($subscriber['source']) . '</td>';
+                    echo '<td>' . esc_html($subscriber['created_at']) . '</td></tr>';
+                }
+                echo '</tbody></table>';
+            }
+
+            echo '<h2 style="margin-top:32px">Listing enquiries</h2>';
             if (!$enquiries) {
                 echo '<p>No enquiries have been submitted yet.</p>';
             } else {
                 echo '<table class="widefat striped"><thead><tr><th>Reference</th><th>Name</th><th>Company</th><th>Email</th><th>Enquiry type</th><th>Submitted</th></tr></thead><tbody>';
                 foreach ($enquiries as $enquiry) {
                     $url = add_query_arg(
-                        array('page' => 'engineerparts-enquiries', 'reference' => $enquiry['enquiry_reference']),
+                        array('page' => 'engineerparts-enquiries', 'type' => 'enquiry', 'reference' => $enquiry['enquiry_reference']),
                         admin_url('admin.php')
                     );
                     echo '<tr><td><a href="' . esc_url($url) . '">' . esc_html($enquiry['enquiry_reference']) . '</a></td>';
@@ -799,7 +1091,15 @@ final class EngineerParts_Customer_Accounts {
                         'key' => $key,
                         'login' => $user->user_login,
                     ), self::frontend_url() . '/reset-password');
-                    wp_mail($email, 'Reset your EngineerParts password', "Use the secure link below to reset your password.\n\n{$url}\n\nIf you did not request this, ignore this email.");
+                    self::send_branded_email(
+                        $email,
+                        'Reset your EngineerParts password',
+                        'Reset your password',
+                        'We received a request to reset the password for your EngineerParts account.',
+                        '<p style="margin:0;color:#52525b;font-size:14px;line-height:1.6;">If you did not request a password reset, you can safely ignore this email.</p>',
+                        'Reset password',
+                        $url
+                    );
                 }
             }
         }
@@ -1166,6 +1466,17 @@ final class EngineerParts_Customer_Accounts {
         $email = sanitize_email($data['email'] ?? '');
         $contact = sanitize_text_field($data['contact'] ?? '');
         if (!is_email($email) || !$contact) return self::error('Please provide a valid name and email address.', 422);
+        $lead_type = sanitize_key($data['lead_type'] ?? 'general_contact');
+        $phone = sanitize_text_field($data['phone'] ?? '');
+        $company = sanitize_text_field($data['company'] ?? '');
+        $message = sanitize_textarea_field($data['message'] ?? '');
+        $requires_business_contact = in_array($lead_type, array('general_contact', 'product_enquiry', 'whole_lot_enquiry', 'equipment_enquiry'), true);
+        if ($requires_business_contact && (!$company || !$phone)) {
+            return self::error('Please provide your company and phone number.', 422);
+        }
+        if ($lead_type === 'general_contact' && !$message) {
+            return self::error('Please provide a message.', 422);
+        }
         if (!self::rate_limit('enquiry', strtolower($email), 10, HOUR_IN_SECONDS)) {
             return self::error('Too many enquiries have been submitted. Please try again later.', 429);
         }
@@ -1174,20 +1485,28 @@ final class EngineerParts_Customer_Accounts {
             $user = get_userdata($user_id);
             $email = $user->user_email;
         }
+        if ($lead_type === 'general_contact') {
+            return self::save_contact_submission($data, $user_id, $contact, $email, $phone);
+        }
         $table = self::enquiries_table();
         $fields = array(
             'customer_id' => $user_id,
-            'lead_type' => sanitize_key($data['lead_type'] ?? 'general_contact'),
+            'lead_type' => $lead_type,
             'enquiry_type' => sanitize_text_field($data['enquiry_type'] ?? ''),
             'product_id' => absint($data['product_id'] ?? 0),
             'product_name' => sanitize_text_field($data['product_name'] ?? ''),
             'sku' => sanitize_text_field($data['sku'] ?? ''),
+            'part_number' => sanitize_text_field($data['part_number'] ?? ''),
+            'lot_id' => sanitize_text_field($data['lot_id'] ?? ''),
+            'equipment_id' => sanitize_text_field($data['equipment_id'] ?? ''),
+            'listing_url' => esc_url_raw($data['listing_url'] ?? ''),
             'requested_quantity' => max(0, absint($data['quantity'] ?? 0)),
-            'message' => sanitize_textarea_field($data['message'] ?? ''),
-            'company' => sanitize_text_field($data['company'] ?? ''),
+            'budget' => sanitize_text_field($data['budget'] ?? ''),
+            'message' => $message,
+            'company' => $company,
             'contact' => $contact,
             'email' => $email,
-            'phone' => sanitize_text_field($data['phone'] ?? ''),
+            'phone' => $phone,
             'country' => sanitize_text_field($data['country'] ?? ''),
             'status' => 'submitted',
             'source' => sanitize_key($data['source'] ?? 'web'),
@@ -1222,28 +1541,42 @@ final class EngineerParts_Customer_Accounts {
             )));
             return self::error('Unable to submit your enquiry right now.', 502);
         }
-        $details = implode("\n", array(
-            "Reference: {$reference}",
-            'Enquiry type: ' . ($fields['enquiry_type'] ?: $fields['lead_type']),
-            "Name: {$contact}",
-            'Company: ' . $fields['company'],
-            "Email: {$email}",
-            'Phone: ' . $fields['phone'],
-            'Country: ' . $fields['country'],
-            'Product / SKU / Lot reference: ' . $fields['sku'],
-            "Message:\n" . $fields['message'],
+        $details = self::email_details_table(array(
+            'Reference' => $reference,
+            'Enquiry type' => $fields['enquiry_type'] ?: $fields['lead_type'],
+            'Name' => $contact,
+            'Company' => $fields['company'],
+            'Email' => $email,
+            'Phone' => $fields['phone'],
+            'Country' => $fields['country'],
+            'Product / SKU / Lot reference' => $fields['sku'],
+            'Part number' => $fields['part_number'],
+            'Lot ID' => $fields['lot_id'],
+            'Equipment ID' => $fields['equipment_id'],
+            'Quantity' => (string) $fields['requested_quantity'],
+            'Budget / target price' => $fields['budget'],
+            'Listing URL' => $fields['listing_url'],
+            'Message' => $fields['message'],
         ));
         $admin_email = sanitize_email(get_option('admin_email'));
         $admin_sent = is_email($admin_email) && wp_mail(
             $admin_email,
-            "New EngineerParts contact enquiry {$reference}",
-            "A new contact enquiry was submitted:\n\n{$details}",
-            array("Reply-To: {$contact} <{$email}>")
+            "New EngineerParts listing enquiry {$reference}",
+            self::email_template(
+                'New listing enquiry',
+                'A customer has submitted a listing enquiry. Reply directly to this email to contact them.',
+                $details
+            ),
+            array("Content-Type: text/html; charset=UTF-8", "Reply-To: {$contact} <{$email}>")
         );
-        $customer_sent = wp_mail(
+        $customer_sent = self::send_branded_email(
             $email,
             "We received your EngineerParts enquiry {$reference}",
-            "Thank you for contacting EngineerParts. We received your enquiry:\n\n{$details}\n\nOur team will respond during the next working day."
+            'We received your enquiry',
+            'Thank you, ' . $contact . '. Your enquiry has been received. Our team will respond during the next working day.',
+            $details,
+            'Visit EngineerParts',
+            self::frontend_url()
         );
         foreach (array('admin_notification' => $admin_sent, 'customer_confirmation' => $customer_sent) as $category => $sent) {
             if (!$sent) {
@@ -1257,6 +1590,130 @@ final class EngineerParts_Customer_Accounts {
         return self::success(array(
             'lead_id' => $reference,
             'received_at' => $fields['created_at'],
+            'admin_email_sent' => $admin_sent,
+        ), 201);
+    }
+
+    public static function subscribe_clearance_alerts(WP_REST_Request $request): WP_REST_Response {
+        global $wpdb;
+        $data = self::json($request);
+        $email = strtolower(sanitize_email($data['email'] ?? ''));
+        if (!is_email($email)) {
+            return self::error('Please enter a valid email address.', 422);
+        }
+        if (!self::rate_limit('clearance_alerts', $email, 10, HOUR_IN_SECONDS)) {
+            return self::error('Too many subscription attempts. Please try again later.', 429);
+        }
+
+        $table = self::clearance_alerts_table();
+        $now = current_time('mysql', true);
+        $saved = $wpdb->query($wpdb->prepare(
+            "INSERT INTO {$table} (email, status, source, created_at, updated_at)
+            VALUES (%s, 'subscribed', %s, %s, %s)
+            ON DUPLICATE KEY UPDATE updated_at = VALUES(updated_at)",
+            $email,
+            sanitize_key($data['source'] ?? 'web'),
+            $now,
+            $now
+        ));
+        if ($saved === false) {
+            error_log(wp_json_encode(array(
+                'timestamp' => gmdate(DATE_ATOM),
+                'endpoint' => 'clearance-alerts',
+                'category' => 'subscription_save_failed',
+                'databaseError' => $wpdb->last_error,
+            )));
+            return self::error('Unable to save your email right now.', 502);
+        }
+        return self::success(array('subscribed' => true), 201);
+    }
+
+    private static function save_contact_submission(array $data, int $user_id, string $contact, string $email, string $phone): WP_REST_Response {
+        global $wpdb;
+        $table = self::contacts_table();
+        $created_at = gmdate(DATE_ATOM);
+        $fields = array(
+            'customer_id' => $user_id,
+            'message' => sanitize_textarea_field($data['message'] ?? ''),
+            'company' => sanitize_text_field($data['company'] ?? ''),
+            'contact' => $contact,
+            'email' => $email,
+            'phone' => $phone,
+            'country' => sanitize_text_field($data['country'] ?? ''),
+            'status' => 'submitted',
+            'source' => sanitize_key($data['source'] ?? 'web'),
+            'created_at' => $created_at,
+            'updated_at' => $created_at,
+        );
+        if ($wpdb->insert($table, $fields) === false) {
+            error_log(wp_json_encode(array(
+                'timestamp' => gmdate(DATE_ATOM),
+                'endpoint' => 'contacts',
+                'category' => 'create_failed',
+                'databaseError' => $wpdb->last_error,
+            )));
+            return self::error('Unable to send your message right now.', 502);
+        }
+        $contact_id = (int) $wpdb->insert_id;
+        $reference_id = $contact_id;
+        do {
+            $reference = sprintf('EP-CONTACT-%s-%06d', gmdate('Y'), $reference_id++);
+            $exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$table} WHERE contact_reference = %s",
+                $reference
+            ));
+        } while ($exists);
+        if ($wpdb->update($table, array('contact_reference' => $reference), array('id' => $contact_id), array('%s'), array('%d')) === false) {
+            $wpdb->delete($table, array('id' => $contact_id), array('%d'));
+            error_log(wp_json_encode(array(
+                'timestamp' => gmdate(DATE_ATOM),
+                'endpoint' => 'contacts',
+                'category' => 'reference_save_failed',
+                'databaseError' => $wpdb->last_error,
+            )));
+            return self::error('Unable to send your message right now.', 502);
+        }
+        $details = self::email_details_table(array(
+            'Reference' => $reference,
+            'Name' => $contact,
+            'Company' => $fields['company'],
+            'Email' => $email,
+            'Phone' => $fields['phone'],
+            'Country' => $fields['country'],
+            'Message' => $fields['message'],
+        ));
+        $admin_email = sanitize_email(get_option('admin_email'));
+        $admin_sent = is_email($admin_email) && wp_mail(
+            $admin_email,
+            "New EngineerParts contact message {$reference}",
+            self::email_template(
+                'New contact message',
+                'A customer has sent a message through the EngineerParts contact form. Reply directly to this email to contact them.',
+                $details
+            ),
+            array("Content-Type: text/html; charset=UTF-8", "Reply-To: {$contact} <{$email}>")
+        );
+        $customer_sent = self::send_branded_email(
+            $email,
+            "We received your EngineerParts message {$reference}",
+            'We received your message',
+            'Thank you, ' . $contact . '. Your message has been received. Our team will respond during the next working day.',
+            $details,
+            'Visit EngineerParts',
+            self::frontend_url()
+        );
+        foreach (array('admin_notification' => $admin_sent, 'customer_confirmation' => $customer_sent) as $category => $sent) {
+            if (!$sent) {
+                error_log(wp_json_encode(array(
+                    'timestamp' => gmdate(DATE_ATOM),
+                    'endpoint' => 'contacts',
+                    'category' => $category . '_mail_failed',
+                )));
+            }
+        }
+        return self::success(array(
+            'lead_id' => $reference,
+            'received_at' => $created_at,
             'admin_email_sent' => $admin_sent,
         ), 201);
     }
@@ -1461,10 +1918,107 @@ final class EngineerParts_Customer_Accounts {
             'productId' => (int) $row['product_id'],
             'productName' => (string) $row['product_name'],
             'sku' => (string) $row['sku'],
+            'partNumber' => (string) $row['part_number'],
+            'lotId' => (string) $row['lot_id'],
+            'equipmentId' => (string) $row['equipment_id'],
+            'listingUrl' => (string) $row['listing_url'],
             'quantity' => (int) $row['requested_quantity'],
+            'budget' => (string) $row['budget'],
             'message' => (string) $row['message'],
             'status' => (string) $row['status'],
         );
+    }
+
+    public static function woocommerce_email_styles(string $css, $email): string {
+        return $css . '
+            #wrapper { background-color: #f4f4f5 !important; }
+            #template_header { background-color: #0a0a0a !important; border-top: 4px solid #dc2626 !important; }
+            #template_header h1 { color: #ffffff !important; }
+            #body_content { background-color: #ffffff !important; }
+            #body_content table td a { color: #dc2626; }
+            #body_content table td a.button,
+            #body_content table td a.button:hover { background-color: #dc2626 !important; border-color: #dc2626 !important; color: #ffffff !important; }
+            #template_footer { color: #71717a !important; }
+        ';
+    }
+
+    private static function send_branded_email(
+        string $to,
+        string $subject,
+        string $title,
+        string $intro,
+        string $body_html,
+        ?string $button_label = null,
+        ?string $button_url = null,
+        array $headers = array()
+    ): bool {
+        $headers[] = 'Content-Type: text/html; charset=UTF-8';
+        return wp_mail(
+            $to,
+            $subject,
+            self::email_template($title, $intro, $body_html, $button_label, $button_url),
+            $headers
+        );
+    }
+
+    private static function email_template(
+        string $title,
+        string $intro,
+        string $body_html,
+        ?string $button_label = null,
+        ?string $button_url = null
+    ): string {
+        $site_url = esc_url(self::frontend_url());
+        $action_html = '';
+        if ($button_label && $button_url) {
+            $safe_url = esc_url($button_url);
+            $action_html =
+                '<table role="presentation" border="0" cellspacing="0" cellpadding="0" style="margin:24px 0 12px;">' .
+                    '<tr><td bgcolor="#dc2626" style="border-radius:4px;">' .
+                        '<a href="' . $safe_url . '" style="display:inline-block;padding:13px 20px;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;">' . esc_html($button_label) . '</a>' .
+                    '</td></tr>' .
+                '</table>' .
+                '<p style="margin:0;color:#71717a;font-size:12px;line-height:1.6;word-break:break-word;">If the button does not work, copy and paste this link into your browser:<br>' .
+                    '<a href="' . $safe_url . '" style="color:#dc2626;">' . esc_html($button_url) . '</a>' .
+                '</p>';
+        }
+
+        return
+            '<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>' .
+            '<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#18181b;">' .
+                '<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">' . esc_html($intro) . '</div>' .
+                '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#f4f4f5" style="width:100%;background-color:#f4f4f5;">' .
+                    '<tr><td align="center" style="padding:32px 16px;">' .
+                        '<table role="presentation" width="600" border="0" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;background-color:#ffffff;border:1px solid #e4e4e7;border-radius:6px;overflow:hidden;">' .
+                            '<tr><td height="4" bgcolor="#dc2626" style="height:4px;background-color:#dc2626;font-size:0;line-height:0;">&nbsp;</td></tr>' .
+                            '<tr><td bgcolor="#0a0a0a" style="padding:22px 28px;background-color:#0a0a0a;">' .
+                                '<a href="' . $site_url . '" style="color:#ffffff;font-size:20px;font-weight:800;letter-spacing:-0.4px;text-decoration:none;">Engineer<span style="color:#ef4444;">Parts</span></a>' .
+                            '</td></tr>' .
+                            '<tr><td style="padding:32px 28px 28px;">' .
+                                '<h1 style="margin:0 0 12px;color:#0a0a0a;font-size:24px;line-height:1.3;">' . esc_html($title) . '</h1>' .
+                                '<p style="margin:0 0 22px;color:#52525b;font-size:14px;line-height:1.7;">' . esc_html($intro) . '</p>' .
+                                $body_html . $action_html .
+                            '</td></tr>' .
+                            '<tr><td bgcolor="#f6f6f6" style="padding:18px 28px;background-color:#f6f6f6;border-top:1px solid #e4e4e7;color:#71717a;font-size:12px;line-height:1.6;">' .
+                                'This is an automated message from <a href="' . $site_url . '" style="color:#dc2626;text-decoration:none;">EngineerParts.com</a>. For your security, never share passwords or account verification links.' .
+                            '</td></tr>' .
+                        '</table>' .
+                        '<p style="margin:16px 0 0;color:#a1a1aa;font-size:11px;">&copy; ' . esc_html(gmdate('Y')) . ' EngineerParts</p>' .
+                    '</td></tr>' .
+                '</table>' .
+            '</body></html>';
+    }
+
+    private static function email_details_table(array $items): string {
+        $rows = '';
+        foreach ($items as $label => $raw_value) {
+            $value = trim((string) $raw_value);
+            if ($value === '') {
+                continue;
+            }
+            $rows .= '<tr><td valign="top" style="width:34%;padding:10px 12px;border-bottom:1px solid #e4e4e7;color:#52525b;font-size:13px;font-weight:700;">' . esc_html((string) $label) . '</td><td valign="top" style="padding:10px 12px;border-bottom:1px solid #e4e4e7;color:#27272a;font-size:13px;line-height:1.6;word-break:break-word;">' . nl2br(esc_html($value)) . '</td></tr>';
+        }
+        return '<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="width:100%;border:1px solid #e4e4e7;border-collapse:collapse;">' . $rows . '</table>';
     }
 
     private static function send_verification(int $user_id, string $email): void {
@@ -1472,7 +2026,15 @@ final class EngineerParts_Customer_Accounts {
         update_user_meta($user_id, self::VERIFY_HASH_META, hash('sha256', $token));
         update_user_meta($user_id, self::VERIFY_EXPIRES_META, (string) (time() + DAY_IN_SECONDS));
         $url = add_query_arg(array('token' => $token, 'email' => $email), self::frontend_url() . '/verify-email');
-        wp_mail($email, 'Verify your EngineerParts account', "Verify your email address using the secure link below.\n\n{$url}\n\nThis link expires in 24 hours.");
+        self::send_branded_email(
+            $email,
+            'Verify your EngineerParts account',
+            'Verify your email address',
+            'Welcome to EngineerParts. Confirm your email address to finish setting up your account.',
+            '<p style="margin:0;color:#52525b;font-size:14px;line-height:1.6;">For your security, this verification link expires in 24 hours.</p>',
+            'Verify email address',
+            $url
+        );
     }
 
     private static function save_business_meta(int $user_id, array $data): void {
@@ -1525,6 +2087,16 @@ final class EngineerParts_Customer_Accounts {
     private static function enquiries_table(): string {
         global $wpdb;
         return $wpdb->prefix . 'engineerparts_enquiries';
+    }
+
+    private static function contacts_table(): string {
+        global $wpdb;
+        return $wpdb->prefix . 'engineerparts_contacts';
+    }
+
+    private static function clearance_alerts_table(): string {
+        global $wpdb;
+        return $wpdb->prefix . 'engineerparts_clearance_alerts';
     }
 
     private static function verify_turnstile(string $token): ?WP_REST_Response {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { submitLead } from "@/lib/leads";
 
 export function ClearanceAlerts() {
   const [email, setEmail] = useState("");
@@ -17,19 +16,17 @@ export function ClearanceAlerts() {
     }
     setState("sending");
     try {
-      await submitLead({
-        lead_type: "clearance_alert",
-        company: "Clearance alerts",
-        contact: email.split("@")[0],
-        email,
-        phone: "",
-        country: "",
-        source: "home_clearance_alerts",
+      const response = await fetch("/api/clearance-alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(result.error || "Unable to save your email.");
       setState("done");
-    } catch {
+    } catch (cause) {
       setState("idle");
-      setError("Something went wrong. Please try again.");
+      setError(cause instanceof Error ? cause.message : "Something went wrong. Please try again.");
     }
   }
 
@@ -42,19 +39,19 @@ export function ClearanceAlerts() {
             Get the latest clearance stock
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-steel-600">
-            A short email when new surplus, aged stock and lots are added to the clearance
-            warehouse. No marketing filler, and you can unsubscribe at any time.
+            Register your email for upcoming clearance stock alerts. 
           </p>
         </div>
         <div>
           {state === "done" ? (
             <div className="rounded-md border border-emerald-200 bg-white px-4 py-4 text-sm font-semibold text-emerald-800">
-              You are on the clearance alert list. New stock summaries will be sent to {email}.
+              Your email ({email}) has been saved for future clearance alerts.
             </div>
           ) : (
             <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row">
               <input
                 type="email"
+                maxLength={191}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"

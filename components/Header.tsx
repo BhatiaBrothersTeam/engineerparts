@@ -101,8 +101,8 @@ export function Header() {
 
           <div className="ml-auto flex items-center gap-1 lg:gap-2">
             <HeaderAction
-              href="/my-enquiries"
-              label="My Enquiries"
+              href="/enquiry"
+              label="Enquiry"
               icon={<InboxIcon />}
               className="hidden xl:flex"
             />
@@ -262,8 +262,8 @@ export function Header() {
                 <Link href={accountHref} className="btn-outline btn-sm justify-start">
                   <UserIcon /> {authenticated ? "Dashboard" : "Login / Account"}
                 </Link>
-                <Link href="/my-enquiries" className="btn-outline btn-sm justify-start">
-                  <InboxIcon /> My Enquiries
+                <Link href="/enquiry" className="btn-outline btn-sm justify-start">
+                  <InboxIcon /> Enquiry
                 </Link>
               </div>
               {authenticated ? (

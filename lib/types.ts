@@ -150,6 +150,7 @@ export interface Lead {
   lead_id: string;
   lead_type: LeadType;
   product_id?: string;
+  product_name?: string;
   sku?: string;
   sku_or_part?: string;
   part_number?: string;

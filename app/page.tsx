@@ -4,7 +4,6 @@ import { SearchBar } from "@/components/SearchBar";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { BrandCard } from "@/components/cards/BrandCard";
 import { ClearanceStockTabs } from "@/components/home/ClearanceStockTabs";
-import { BulkDealSection } from "@/components/home/BulkDealSection";
 import { ClearanceAlerts } from "@/components/home/ClearanceAlerts";
 import { brandsFromProducts } from "@/lib/data/brands";
 import { img, photo } from "@/lib/images";
@@ -14,31 +13,6 @@ import { getProducts } from "@/lib/woocommerce";
 function countByBrand(products: Awaited<ReturnType<typeof getProducts>>, name: string) {
   return products.filter((p) => p.brand === name).length;
 }
-
-const WHY = [
-  {
-    title: "Current availability",
-    copy: "Review listed quantities, prices and availability before you buy or enquire.",
-    icon: (
-      <path d="M3 9.5 12 4l9 5.5v9L12 21l-9-2.5v-9Z M3 9.5 12 15m0 0 9-5.5M12 15v6" />
-    ),
-  },
-  {
-    title: "Product details",
-    copy: "Each listing presents the details supplied in the product catalogue.",
-    icon: <path d="M12 3v18m4.5-12.5C16.5 6.5 14.5 6 12 6c-2.5 0-4 1.2-4 3s1.5 2.6 4 3 4 1.2 4 3-1.5 3-4 3c-2.5 0-4.5-.5-4.5-2.5" />,
-  },
-  {
-    title: "Buy or enquire",
-    copy: "Add fixed-price items straight to the cart, or send an enquiry about anything without a published price.",
-    icon: <path d="M4 6h2l2.2 10.3a2 2 0 0 0 2 1.7h7.6a2 2 0 0 0 2-1.6L21 9H6" />,
-  },
-  {
-    title: "Direct enquiries",
-    copy: "Ask about a product when pricing, quantity or other details are not published.",
-    icon: <path d="M12 21c5-2 8-6 8-11a12 12 0 0 0-8-3 12 12 0 0 0-8 3c0 5 3 9 8 11Zm0-11v8m0 0-3-3m3 3 3-3" />,
-  },
-];
 
 export default async function HomePage() {
   const products = await getProducts();
@@ -150,41 +124,9 @@ export default async function HomePage() {
         </div>
       </section> : null}
 
-      <section className="section border-y border-navy-100 bg-navy-50/50">
-        <div className="shell">
-          <SectionHeading
-            eyebrow="Why Engineerparts?"
-            title="A simpler way to browse"
-            description="Search the live catalogue, review available details, and enquire when you need more information."
-          />
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {WHY.map((item) => (
-              <div key={item.title} className="card p-6">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-brand-600/10 text-brand-700">
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    {item.icon}
-                  </svg>
-                </span>
-                <h3 className="mt-4 text-base font-bold text-navy-900">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-steel-600">{item.copy}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-navy-950">
-        <div className="shell py-16 lg:py-20">
-          <BulkDealSection />
-        </div>
-      </section>
-
       <section className="section">
         <div className="shell">
           <ClearanceAlerts />
-          <p className="mt-6 text-xs text-steel-500">
-            {formatNumber(products.length)} product listings are currently available to browse.
-          </p>
         </div>
       </section>
     </>

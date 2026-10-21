@@ -9,8 +9,6 @@ interface FormState {
   email: string;
   phone: string;
   country: string;
-  enquiryType: string;
-  reference: string;
   message: string;
 }
 
@@ -20,18 +18,8 @@ const EMPTY: FormState = {
   email: "",
   phone: "",
   country: "",
-  enquiryType: "Product enquiry",
-  reference: "",
   message: "",
 };
-
-const TYPES = [
-  "Product enquiry",
-  "Whole lot enquiry",
-  "Equipment enquiry",
-  "Bulk / large quantity",
-  "Other",
-];
 
 export function ContactForm() {
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -47,8 +35,8 @@ export function ContactForm() {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    if (!form.name.trim() || !form.company.trim() || !form.email.trim() || !form.message.trim()) {
-      setError("Please provide your name, company, email and a message.");
+    if (!form.name.trim() || !form.company.trim() || !form.email.trim() || !form.phone.trim() || !form.message.trim()) {
+      setError("Please provide your name, company, email, phone and a message.");
       return;
     }
     setState("sending");
@@ -60,11 +48,7 @@ export function ContactForm() {
         email: form.email,
         phone: form.phone,
         country: form.country,
-        enquiry_type: form.enquiryType,
-        sku: form.reference || undefined,
-        message: [form.reference ? `Reference: ${form.reference}` : "", form.message]
-          .filter(Boolean)
-          .join("\n"),
+        message: form.message,
         source: "contact_page",
       });
       setReference(lead.lead_id);
@@ -83,15 +67,15 @@ export function ContactForm() {
   if (state === "done") {
     return (
       <div role="status" className="rounded-card border border-emerald-200 bg-emerald-50 p-4 sm:p-6">
-        <p className="text-lg font-bold text-emerald-900">Enquiry received</p>
+        <p className="text-lg font-bold text-emerald-900">Message received</p>
         <p className="mt-2 text-sm text-emerald-800">
           Your reference is <span className="font-mono font-semibold">{reference}</span>. The
-          clearance desk will respond during the next working day.
+          team will respond during the next working day.
         </p>
         {!adminEmailSent ? (
           <p role="alert" className="mt-3 text-sm font-semibold text-signal-700">
-            Your enquiry was saved, but the admin email could not be sent. Please contact the
-            clearance desk and quote your reference.
+            Your message was saved, but the admin email could not be sent. Please contact the
+            team and quote your reference.
           </p>
         ) : null}
         <button
@@ -103,7 +87,7 @@ export function ContactForm() {
           }}
           className="btn-navy btn-sm mt-5"
         >
-          Send another enquiry
+          Send another message
         </button>
       </div>
     );
@@ -121,31 +105,12 @@ export function ContactForm() {
         <Field label="Email" required>
           <input type="email" className="field" value={form.email} onChange={(e) => update("email", e.target.value)} required />
         </Field>
-        <Field label="Phone">
-          <input type="tel" autoComplete="tel" className="field" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+        <Field label="Phone" required>
+          <input type="tel" autoComplete="tel" className="field" value={form.phone} onChange={(e) => update("phone", e.target.value)} required />
         </Field>
         <Field label="Country">
           <input className="field" value={form.country} onChange={(e) => update("country", e.target.value)} />
         </Field>
-        <Field label="Enquiry type">
-          <select className="field" value={form.enquiryType} onChange={(e) => update("enquiryType", e.target.value)}>
-            {TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <div className="sm:col-span-2">
-          <Field label="Product / SKU / Lot reference (optional)">
-            <input
-              className="field"
-              value={form.reference}
-              onChange={(e) => update("reference", e.target.value)}
-              placeholder="Enter a product name, SKU or reference"
-            />
-          </Field>
-        </div>
         <div className="sm:col-span-2">
           <Field label="Message" required>
             <textarea
@@ -165,9 +130,9 @@ export function ContactForm() {
       ) : null}
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button type="submit" disabled={state === "sending"} className="btn-primary w-full sm:w-auto">
-          {state === "sending" ? "Sending..." : "Send Enquiry"}
+          {state === "sending" ? "Sending..." : "Send Message"}
         </button>
-        <p className="text-[11px] text-steel-500">Used only to respond to this enquiry.</p>
+        <p className="text-[11px] text-steel-500">Used only to respond to your message.</p>
       </div>
     </form>
   );
