@@ -5,15 +5,20 @@ export function BrandCard({ brand, count }: { brand: Brand; count: number }) {
   return (
     <Link
       href={`/brands/${brand.slug}`}
-      className="group flex flex-col justify-between rounded-card border border-navy-100 bg-white p-5 shadow-card transition-all hover:border-brand-300 hover:shadow-lift"
+      className="card card-interactive group flex flex-col justify-between p-6"
     >
-      <div>
-        <span className="display block text-lg font-extrabold tracking-tight text-navy-900 transition-colors group-hover:text-brand-700">
-          {brand.logoText}
+      <div className="flex items-start gap-3.5">
+        <span className="icon-tile display shrink-0 text-lg font-extrabold text-brand-600" aria-hidden="true">
+          {brand.logoText.slice(0, 1)}
         </span>
-        <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-steel-400">
-          {brand.sectors[0]}
-        </span>
+        <div className="min-w-0">
+          <span className="display block truncate text-lg font-extrabold tracking-tight text-navy-900 transition-colors group-hover:text-brand-700">
+            {brand.logoText}
+          </span>
+          <span className="mt-1 block truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-steel-400">
+            {brand.sectors[0]}
+          </span>
+        </div>
       </div>
       <div className="mt-6 flex items-center justify-between border-t border-navy-100 pt-3">
         <span className="text-xs font-semibold text-navy-700">{count} clearance items</span>

@@ -30,7 +30,7 @@ export function LotCard({ lot }: { lot: Lot }) {
   }
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-card border border-navy-100 bg-white shadow-card transition-shadow hover:shadow-lift">
+    <article className="card card-interactive group flex h-full flex-col overflow-hidden">
       <Link href={`/lots/${lot.lot_reference}`} className="relative block aspect-[16/10] overflow-hidden bg-navy-50">
         <Image
           src={lot.images[0]}
@@ -51,28 +51,28 @@ export function LotCard({ lot }: { lot: Lot }) {
           <StatusPill status={lot.status} />
         </div>
 
-        <h3 className="mt-2 text-[17px] font-bold leading-snug text-navy-900">
+        <h3 className="mt-2 break-words text-[17px] font-bold leading-snug text-navy-900">
           <Link href={`/lots/${lot.lot_reference}`} className="hover:text-brand-700">
             {lot.name}
           </Link>
         </h3>
 
         <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]">
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">Approx. total units</dt>
             <dd className="font-semibold text-navy-800">{formatNumber(lot.total_quantity)}</dd>
           </div>
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">Line items</dt>
             <dd className="font-semibold text-navy-800">{lot.items.length}</dd>
           </div>
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">Warehouse</dt>
-            <dd className="font-semibold text-navy-800">{lot.location}</dd>
+            <dd className="break-words font-semibold text-navy-800">{lot.location}</dd>
           </div>
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">Added</dt>
-            <dd className="font-semibold text-navy-800">{relativeAdded(lot.added_date)}</dd>
+            <dd className="break-words font-semibold text-navy-800">{relativeAdded(lot.added_date)}</dd>
           </div>
         </dl>
 

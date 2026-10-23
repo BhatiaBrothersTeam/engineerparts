@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { submitLead } from "@/lib/leads";
+import { IconTile } from "@/components/ui/IconTile";
 
 interface FormState {
   name: string;
@@ -89,22 +90,39 @@ export function ListingEnquiryForm() {
 
   if (state === "done") {
     return (
-      <div role="status" className="rounded-card border border-emerald-200 bg-emerald-50 p-4 sm:p-6">
-        <p className="text-lg font-bold text-emerald-900">Enquiry received</p>
-        <p className="mt-2 text-sm text-emerald-800">
-          Your reference is <span className="font-mono font-semibold">{reference}</span>. The
+      <div role="status" className="card p-6 text-center sm:p-10">
+        <span className="icon-tile mx-auto h-14 w-14 bg-emerald-50 text-emerald-600" aria-hidden="true">
+          <CheckCircleIcon />
+        </span>
+        <p className="mt-4 text-xl font-extrabold text-navy-900">Enquiry received</p>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-steel-600">
+          Your reference is <span className="font-mono font-semibold text-navy-800">{reference}</span>. The
           clearance desk will respond during the next working day.
         </p>
-        <a href="/account/enquiries" className="btn-outline btn-sm mt-5">
-          View enquiry dashboard
-        </a>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <a href="/account/enquiries" className="btn-primary">
+            View enquiry dashboard
+          </a>
+          <a href="/clearance" className="btn-outline">
+            Continue browsing
+          </a>
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="rounded-card border border-navy-100 bg-white p-4 shadow-card sm:p-6">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className="card p-4 sm:p-6">
+      <div className="flex items-center gap-3 border-b border-navy-100 pb-4">
+        <IconTile>
+          <MessageIcon />
+        </IconTile>
+        <div>
+          <h2 className="text-base font-extrabold text-navy-900">Enquiry details</h2>
+          <p className="text-xs text-steel-500">Fields marked * are required.</p>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <Field label="Name" required>
           <input className="field" value={form.name} onChange={(e) => update("name", e.target.value)} required />
         </Field>
@@ -171,13 +189,31 @@ export function ListingEnquiryForm() {
           {error}
         </p>
       ) : null}
-      <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={state === "sending"} className="btn-primary w-full sm:w-auto">
+      <div className="mt-6 flex flex-col items-start gap-3 border-t border-navy-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="order-2 text-[11px] text-steel-500 sm:order-1">Used only to respond to this enquiry.</p>
+        <button type="submit" disabled={state === "sending"} className="btn-primary order-1 w-full sm:order-2 sm:w-auto">
           {state === "sending" ? "Submitting..." : "Submit Enquiry"}
         </button>
-        <p className="text-[11px] text-steel-500">Used only to respond to this enquiry.</p>
       </div>
     </form>
+  );
+}
+
+function CheckCircleIcon() {
+  return (
+    <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 12.5l2.5 2.5L16 9.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function MessageIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <path d="M4 5h16v11H9l-5 4V5z" strokeLinejoin="round" />
+      <path d="M8 9h8M8 12.5h5" strokeLinecap="round" />
+    </svg>
   );
 }
 

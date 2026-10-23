@@ -27,27 +27,18 @@ export default async function ClearancePage() {
         eyebrow="Clearance stock"
         title="Industrial product catalogue"
         description="Browse industrial products and clearance stock by brand, category, condition, price, quantity and location."
-      >
-        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {[
-            ...(products.length ? [[formatNumber(products.length), "Listings"]] : []),
-            ...(categoryCount ? [[String(categoryCount), "Categories"]] : []),
-            ...(brands.length ? [[String(brands.length), "Brands"]] : []),
-          ].map(([value, label]) => (
-            <div key={label} className="rounded-md border border-white/15 bg-white/5 px-4 py-3 text-center">
-              <dt className="text-lg font-extrabold text-white">{value}</dt>
-              <dd className="text-[11px] font-semibold uppercase tracking-wide text-steel-400">{label}</dd>
-            </div>
-          ))}
-        </dl>
-      </PageHero>
+        stats={[
+          ...(products.length ? [[formatNumber(products.length), "Listings"] as [string, string]] : []),
+          ...(categoryCount ? [[String(categoryCount), "Categories"] as [string, string]] : []),
+          ...(brands.length ? [[String(brands.length), "Brands"] as [string, string]] : []),
+        ]}
+      />
 
       <section className="section">
         <div className="shell">
           <ClearanceBrowser items={products} facets={facets} />
         </div>
       </section>
-
     </>
   );
 }

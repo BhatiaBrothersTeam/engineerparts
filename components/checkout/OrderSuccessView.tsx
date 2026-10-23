@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useCart } from "@/components/providers/CartProvider";
+import { IconTile } from "@/components/ui/IconTile";
 import { track } from "@/lib/analytics";
 import { CONTACT_EMAIL, CONTACT_PHONE, formatPrice } from "@/lib/utils";
 
@@ -128,15 +129,21 @@ export function OrderSuccessView({
   if (view === "confirmed") {
     return (
       <div className="card p-6 sm:p-10">
-        <p className="text-lg font-bold text-navy-900">Thank you — your payment was successful</p>
-        <p className="mt-2 text-sm text-steel-600">Order #{order.number} is confirmed. We&apos;ve emailed you a receipt.</p>
+        <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
+          <span className="icon-tile h-14 w-14 bg-emerald-50 text-emerald-600" aria-hidden="true">
+            <CheckCircleIcon />
+          </span>
+          <p className="mt-4 text-xl font-extrabold text-navy-900">Thank you — your payment was successful</p>
+          <p className="mt-2 text-sm text-steel-600">Order <span className="font-semibold text-navy-800">#{order.number}</span> is confirmed. We&apos;ve emailed you a receipt.</p>
+        </div>
         <OrderItems order={order} />
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
           {authenticated ? (
             <Link href="/account/orders" className="btn-primary">View my orders</Link>
           ) : (
             <Link href="/clearance" className="btn-primary">Continue shopping</Link>
           )}
+          <Link href="/clearance" className="btn-outline">Back to clearance stock</Link>
         </div>
         <SupportFooter />
       </div>
@@ -147,13 +154,18 @@ export function OrderSuccessView({
     const cancelled = order.status === "cancelled";
     return (
       <div className="card p-6 sm:p-10">
-        <p className="text-lg font-bold text-navy-900">{cancelled ? "Payment attempt expired or was cancelled" : "Payment did not go through"}</p>
-        <p className="mt-2 text-sm text-steel-600">
-          {cancelled
-            ? `Order #${order.number} was cancelled. WooCommerce has released its stock hold; review your cart and try again.`
-            : `Order #${order.number} was not paid. Your cart has been kept so you can try again, or contact our sales team.`}
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
+          <IconTile>
+            <AlertIcon />
+          </IconTile>
+          <p className="mt-4 text-xl font-extrabold text-navy-900">{cancelled ? "Payment attempt expired or was cancelled" : "Payment did not go through"}</p>
+          <p className="mt-2 text-sm text-steel-600">
+            {cancelled
+              ? `Order #${order.number} was cancelled. WooCommerce has released its stock hold; review your cart and try again.`
+              : `Order #${order.number} was not paid. Your cart has been kept so you can try again, or contact our sales team.`}
+          </p>
+        </div>
+        <div className="mt-6 flex flex-wrap justify-center gap-3 sm:justify-start">
           <Link href="/checkout" className="btn-primary">Try again</Link>
         </div>
         <SupportFooter />
@@ -164,11 +176,16 @@ export function OrderSuccessView({
   if (view === "timed-out") {
     return (
       <div className="card p-6 sm:p-10">
-        <p className="text-lg font-bold text-navy-900">Still confirming your payment</p>
-        <p className="mt-2 text-sm text-steel-600">
-          This is taking longer than usual, but your order #{order.number} is safe. We&apos;ll email your receipt as soon as it clears — no need to keep this tab open.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
+          <IconTile>
+            <ClockIcon />
+          </IconTile>
+          <p className="mt-4 text-xl font-extrabold text-navy-900">Still confirming your payment</p>
+          <p className="mt-2 text-sm text-steel-600">
+            This is taking longer than usual, but your order #{order.number} is safe. We&apos;ll email your receipt as soon as it clears — no need to keep this tab open.
+          </p>
+        </div>
+        <div className="mt-6 flex flex-wrap justify-center gap-3 sm:justify-start">
           <Link href="/checkout" className="btn-outline">Return to cart</Link>
         </div>
         <SupportFooter />
@@ -177,8 +194,11 @@ export function OrderSuccessView({
   }
 
   return (
-    <div className="card p-6 sm:p-10">
-      <p className="text-lg font-bold text-navy-900">Confirming your payment...</p>
+    <div className="card flex flex-col items-center p-6 text-center sm:items-start sm:p-10 sm:text-left" role="status" aria-live="polite">
+      <IconTile>
+        <span className="block h-5 w-5 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" aria-hidden="true" />
+      </IconTile>
+      <p className="mt-4 text-xl font-extrabold text-navy-900">Confirming your payment...</p>
       <p className="mt-2 text-sm text-steel-600">Order #{order.number} — this usually takes just a few seconds.</p>
     </div>
   );
@@ -186,18 +206,46 @@ export function OrderSuccessView({
 
 function OrderItems({ order }: { order: OrderSummary }) {
   return (
-    <ul className="mt-5 divide-y divide-navy-100 text-sm">
+    <ul className="mt-6 divide-y divide-navy-100 rounded-md border border-navy-100 bg-navy-50/40 px-4 text-sm">
       {order.items.map((item, index) => (
         <li key={index} className="flex justify-between gap-3 py-3">
           <span className="min-w-0 truncate font-semibold text-navy-900">{item.name} × {item.quantity}</span>
           <span className="shrink-0 font-semibold text-navy-900">{formatPrice(Number(item.total), order.currency)}</span>
         </li>
       ))}
-      <li className="flex justify-between gap-3 pt-3 text-base">
+      <li className="flex justify-between gap-3 py-3 text-base">
         <span className="font-bold">Total</span>
         <span className="font-extrabold">{formatPrice(Number(order.total), order.currency)}</span>
       </li>
     </ul>
+  );
+}
+
+function CheckCircleIcon() {
+  return (
+    <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 12.5l2.5 2.5L16 9.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <path d="M12 3 2 20h20L12 3z" strokeLinejoin="round" />
+      <path d="M12 10v4" strokeLinecap="round" />
+      <circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.5 2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

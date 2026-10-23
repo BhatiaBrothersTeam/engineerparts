@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { IconTile } from "@/components/ui/IconTile";
 import { ConditionPill, ListingBadges, StatusPill } from "@/components/ui/Badge";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { ProductActions } from "@/components/product/ProductActions";
@@ -96,9 +97,56 @@ export default async function ProductPage({ params }: { params: { slug: string }
               {product.condition !== "Not provided" ? <ConditionPill condition={product.condition} /> : null}
             </div>
 
-            <h1 className="mt-3 text-2xl font-extrabold leading-tight text-navy-900 sm:text-3xl">
+            <h1 className="mt-3 break-words text-2xl font-extrabold leading-tight text-navy-900 sm:text-3xl">
               {product.name}
             </h1>
+
+            {isPublicProductValue(product.condition) || isPublicProductValue(product.warehouse_location) || isPublicProductValue(product.lead_time) ? (
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {isPublicProductValue(product.condition) ? (
+                  <div className="card flex items-center gap-3 p-3">
+                    <IconTile>
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                        <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="12" cy="12" r="9" />
+                      </svg>
+                    </IconTile>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-steel-500">Condition</p>
+                      <p className="truncate text-sm font-bold text-navy-900">{product.condition}</p>
+                    </div>
+                  </div>
+                ) : null}
+                {isPublicProductValue(product.warehouse_location) ? (
+                  <div className="card flex items-center gap-3 p-3">
+                    <IconTile>
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                        <path d="M12 21s-7-6.2-7-11.2A7 7 0 0 1 19 9.8C19 14.8 12 21 12 21Z" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="12" cy="9.5" r="2.3" />
+                      </svg>
+                    </IconTile>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-steel-500">Warehouse</p>
+                      <p className="truncate text-sm font-bold text-navy-900">{product.warehouse_location}</p>
+                    </div>
+                  </div>
+                ) : null}
+                {isPublicProductValue(product.lead_time) ? (
+                  <div className="card flex items-center gap-3 p-3">
+                    <IconTile>
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3.5 2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </IconTile>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-steel-500">Dispatch</p>
+                      <p className="truncate text-sm font-bold text-navy-900">{product.lead_time}</p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             <dl className="card mt-5 grid grid-cols-1 gap-x-4 gap-y-3 p-4 text-xs sm:grid-cols-2">
               <Meta label="SKU" value={product.sku} />

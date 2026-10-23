@@ -13,7 +13,7 @@ export function EquipmentCard({ unit }: { unit: Equipment }) {
   const { toast } = useToast();
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-card border border-navy-100 bg-white shadow-card transition-shadow hover:shadow-lift">
+    <article className="card card-interactive group flex h-full flex-col overflow-hidden">
       <Link href={`/equipment/${unit.slug}`} className="relative block aspect-[16/10] overflow-hidden bg-navy-50">
         <Image
           src={unit.images[0]}
@@ -36,16 +36,16 @@ export function EquipmentCard({ unit }: { unit: Equipment }) {
           <StatusPill status={unit.status} />
         </div>
 
-        <h3 className="mt-2 text-[17px] font-bold leading-snug text-navy-900">
+        <h3 className="mt-2 break-words text-[17px] font-bold leading-snug text-navy-900">
           <Link href={`/equipment/${unit.slug}`} className="hover:text-brand-700">
             {unit.name}
           </Link>
         </h3>
 
         <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]">
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">Model</dt>
-            <dd className="font-semibold text-navy-800">{unit.model}</dd>
+            <dd className="break-words font-semibold text-navy-800">{unit.model}</dd>
           </div>
           <div>
             <dt className="text-steel-500">Serial number</dt>
@@ -53,21 +53,21 @@ export function EquipmentCard({ unit }: { unit: Equipment }) {
               {unit.serial_number}
             </dd>
           </div>
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">Year</dt>
             <dd className="font-semibold text-navy-800">{unit.year}</dd>
           </div>
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">Operating hours</dt>
             <dd className="font-semibold text-navy-800">{formatNumber(unit.operating_hours)} h</dd>
           </div>
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">Location</dt>
-            <dd className="font-semibold text-navy-800">{unit.location}</dd>
+            <dd className="break-words font-semibold text-navy-800">{unit.location}</dd>
           </div>
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">Added</dt>
-            <dd className="font-semibold text-navy-800">{relativeAdded(unit.added_date)}</dd>
+            <dd className="break-words font-semibold text-navy-800">{relativeAdded(unit.added_date)}</dd>
           </div>
         </dl>
 

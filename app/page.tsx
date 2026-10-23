@@ -2,13 +2,57 @@ import Image from "next/image";
 import Link from "next/link";
 import { SearchBar } from "@/components/SearchBar";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { StatRow } from "@/components/ui/StatRow";
+import { IconTile } from "@/components/ui/IconTile";
 import { BrandCard } from "@/components/cards/BrandCard";
 import { ClearanceStockTabs } from "@/components/home/ClearanceStockTabs";
 import { ClearanceAlerts } from "@/components/home/ClearanceAlerts";
 import { brandsFromProducts } from "@/lib/data/brands";
 import { img, photo } from "@/lib/images";
 import { formatNumber } from "@/lib/utils";
+import type { Product } from "@/lib/types";
 import { getProducts } from "@/lib/woocommerce";
+
+const WHY_US = [
+  {
+    title: "Verified listings",
+    copy: "Condition, specification and stock details are published with every available item.",
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+        <path d="m5 13 4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    title: "Dedicated clearance desk",
+    copy: "A team that responds to enquiries, confirms stock and arranges collection or freight.",
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+        <path d="M4 5h16M4 12h16M4 19h10" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    title: "Freight & logistics support",
+    copy: "From single parts to palletised equipment, we help arrange delivery to your site.",
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+        <path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="7.5" cy="18" r="1.6" />
+        <circle cx="17.5" cy="18" r="1.6" />
+      </svg>
+    ),
+  },
+  {
+    title: "Built for business buyers",
+    copy: "Bulk quantities, lots and equipment enquiries are handled with trade pricing in mind.",
+    icon: (
+      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+        <path d="M4 21V9l8-5 8 5v12M9 21v-6h6v6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+];
 
 function countByBrand(products: Awaited<ReturnType<typeof getProducts>>, name: string) {
   return products.filter((p) => p.brand === name).length;
@@ -16,6 +60,18 @@ function countByBrand(products: Awaited<ReturnType<typeof getProducts>>, name: s
 
 export default async function HomePage() {
   const products = await getProducts();
+  const available = products.filter((product) => product.status !== "Sold");
+  const productsByTab: Record<"latest" | "lowest" | "bulk" | "equipment", Product[]> = {
+    latest: [...available].sort((a, b) => new Date(b.added_date).getTime() - new Date(a.added_date).getTime()).slice(0, 8),
+    lowest: [...available].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity)).slice(0, 8),
+    bulk: available
+      .filter((product) => product.listing_type === "Whole Lot" || product.category === "lots-bulk-clearance" || (product.quantity_available ?? 0) >= 200)
+      .sort((a, b) => (b.quantity_available ?? -1) - (a.quantity_available ?? -1))
+      .slice(0, 8),
+    equipment: available
+      .filter((product) => product.category === "equipment" || product.badges.includes("EQUIPMENT"))
+      .slice(0, 8),
+  };
   const brands = brandsFromProducts(products);
   const categoryCount = new Set(products.map((product) => product.category).filter((category) => category && category !== "uncategorised")).size;
   const inventoryStats = [
@@ -44,6 +100,9 @@ export default async function HomePage() {
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href="/clearance" className="btn-primary">
                 Browse Clearance Stock
+              </Link>
+              <Link href="/enquiry" className="btn-outline">
+                Submit an Enquiry
               </Link>
             </div>
 
@@ -78,14 +137,7 @@ export default async function HomePage() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-navy-950/85 via-navy-950/25 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {inventoryStats.map(([value, label]) => (
-                  <div key={label} className="rounded-md border border-white/10 bg-navy-950/70 px-3.5 py-3 backdrop-blur-md">
-                    <p className="text-lg font-extrabold text-white sm:text-xl">{value}</p>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-steel-300">{label}</p>
-                  </div>
-                ))}
-              </div>
+              <StatRow stats={inventoryStats} />
               <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-brand-200">
                 Industrial stock, ready to browse
               </p>
@@ -94,7 +146,27 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="section border-y border-navy-100 bg-navy-50/50">
+      <section className="section-alt section">
+        <div className="shell">
+          <SectionHeading
+            eyebrow="Why Engineerparts.com"
+            title="Built for industrial buyers"
+            description="The clearance desk and catalogue are set up around how business buyers actually source parts and equipment."
+          />
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {WHY_US.map((item) => (
+              <div key={item.title} className="card relative overflow-hidden p-6">
+                <span className="absolute inset-x-0 top-0 h-1 bg-brand-600" aria-hidden="true" />
+                <IconTile size="lg">{item.icon}</IconTile>
+                <h3 className="mt-5 text-lg font-bold text-navy-900">{item.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-steel-600">{item.copy}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
         <div className="shell">
           <SectionHeading
             eyebrow="Available stock"
@@ -103,7 +175,7 @@ export default async function HomePage() {
             action={{ label: "Browse all", href: "/clearance" }}
           />
           <div className="mt-8">
-            <ClearanceStockTabs products={products} />
+            <ClearanceStockTabs productsByTab={productsByTab} />
           </div>
         </div>
       </section>

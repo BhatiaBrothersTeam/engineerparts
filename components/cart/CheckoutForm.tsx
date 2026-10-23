@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/providers/CartProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { QuantityStepper } from "@/components/ui/QuantityStepper";
+import { IconTile } from "@/components/ui/IconTile";
 import { track } from "@/lib/analytics";
 import { logError } from "@/lib/logger";
 import { CONTACT_EMAIL, CONTACT_PHONE, formatPrice, isPlausibleAddress, isValidInternationalPhone, normalizePhone } from "@/lib/utils";
@@ -284,9 +285,11 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
 
   if (state === "submitting") {
     return (
-      <div className="mx-auto flex min-h-[50vh] max-w-xl flex-col items-center justify-center px-6 text-center" role="status" aria-live="polite">
-        <span className="mb-5 h-10 w-10 animate-spin rounded-full border-4 border-navy-200 border-t-brand-600" aria-hidden="true" />
-        <h1 className="text-xl font-extrabold text-navy-900">Preparing your secure payment</h1>
+      <div className="card mx-auto flex min-h-[50vh] max-w-xl flex-col items-center justify-center px-6 py-10 text-center" role="status" aria-live="polite">
+        <IconTile>
+          <span className="block h-5 w-5 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" aria-hidden="true" />
+        </IconTile>
+        <h1 className="mt-5 text-xl font-extrabold text-navy-900">Preparing your secure payment</h1>
         <p className="mt-3 text-sm leading-relaxed text-steel-600">
           Your order is being submitted. We’ll redirect you to Nomod shortly. Please don’t refresh or close this page.
         </p>
@@ -296,8 +299,9 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
 
   if (!items.length) {
     return (
-      <div className="rounded-card border border-dashed border-navy-200 bg-navy-50/60 p-6 text-center sm:p-10">
+      <div className="card mx-auto max-w-xl p-6 text-center sm:p-10">
         <p className="text-lg font-bold text-navy-900">Your cart is empty</p>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-steel-600">Add clearance stock to your cart before checking out.</p>
         <Link href="/clearance" className="btn-primary mt-5 inline-flex">
           Browse clearance stock
         </Link>
@@ -309,17 +313,22 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
     <form onSubmit={onSubmit} className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)]">
       <div className="min-w-0 space-y-6">
         {!authLoading && !authenticated ? <div className="rounded-md border border-navy-200 bg-navy-50 px-4 py-3 text-sm text-navy-800"><Link href="/login?redirect=/checkout" className="font-bold text-brand-700">Sign in</Link> to prefill saved details, or continue with guest checkout. New customer? <Link href="/register" className="font-bold text-brand-700">Create an account</Link>.</div> : null}
-        <div className="rounded-md border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-navy-800">
-          <p className="font-bold">This places a real order</p>
-          <p className="mt-1 text-xs leading-relaxed text-steel-700">Submitting creates an order and starts secure payment. Final prices, shipping, tax and stock are confirmed by the store.</p>
+        <div className="flex items-start gap-3 rounded-md border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-navy-800">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700" aria-hidden="true">
+            <LockIcon />
+          </span>
+          <div>
+            <p className="font-bold">This places a real order</p>
+            <p className="mt-1 text-xs leading-relaxed text-steel-700">Submitting creates an order and starts secure payment. Final prices, shipping, tax and stock are confirmed by the store.</p>
+          </div>
         </div>
-        <ol aria-label="Checkout steps" className="grid grid-cols-3 gap-2">
+        <ol aria-label="Checkout steps" className="card flex items-stretch gap-1 p-2 sm:gap-2 sm:p-3">
           {(["Your details", "Delivery", "Review"] as const).map((label, index) => {
             const targetStep = (index + 1) as CheckoutStep;
             const active = step === targetStep;
             const complete = step > targetStep;
             return (
-              <li key={label}>
+              <li key={label} className="flex-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -330,9 +339,9 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
                   }}
                   disabled={!complete && !active}
                   aria-current={active ? "step" : undefined}
-                  className={`flex w-full items-center gap-2 border-b-2 px-1 pb-3 text-left text-sm ${active ? "border-brand-600 font-bold text-navy-900" : complete ? "border-brand-300 text-navy-700" : "border-navy-100 text-steel-400"}`}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors sm:px-3 ${active ? "bg-navy-900 font-bold text-white" : complete ? "text-navy-700 hover:bg-navy-50" : "text-steel-400"}`}
                 >
-                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${active ? "bg-brand-600 text-white" : complete ? "bg-brand-100 text-brand-800" : "bg-navy-100 text-steel-500"}`}>{complete ? "✓" : targetStep}</span>
+                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${active ? "bg-white text-navy-900" : complete ? "bg-brand-100 text-brand-800" : "bg-navy-100 text-steel-500"}`}>{complete ? <CheckIcon className="h-3.5 w-3.5" /> : targetStep}</span>
                   <span className="hidden sm:inline">{label}</span>
                 </button>
               </li>
@@ -341,7 +350,12 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
         </ol>
         {step === 1 ? (
           <section className="card p-4 sm:p-6">
-            <h2 className="text-lg font-extrabold text-navy-900">Your details</h2>
+            <div className="flex items-center gap-3">
+              <IconTile>
+                <UserIcon />
+              </IconTile>
+              <h2 className="text-lg font-extrabold text-navy-900">Your details</h2>
+            </div>
             <fieldset className="mt-5">
               <legend className="field-label">I am buying as</legend>
               <div className="mt-2 grid gap-3 sm:grid-cols-2">
@@ -396,7 +410,12 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
         ) : null}
         {step === 2 ? (
           <section className="card p-4 sm:p-6">
-            <h2 className="text-lg font-extrabold text-navy-900">How would you like to receive your order?</h2>
+            <div className="flex items-center gap-3">
+              <IconTile>
+                <TruckIcon />
+              </IconTile>
+              <h2 className="text-lg font-extrabold text-navy-900">How would you like to receive your order?</h2>
+            </div>
             <div className="mt-4 rounded-md border border-brand-300 bg-brand-50 px-4 py-3">
               <p className="text-sm font-semibold text-navy-900">Delivery</p>
               <p className="mt-1 text-xs text-steel-600">Delivered to the address you provide. The delivery charge is shown in your order summary.</p>
@@ -446,7 +465,12 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
         {step === 3 ? (
           <section className="card p-4 sm:p-6">
             <section aria-labelledby="review-payment-heading">
-              <h2 id="review-payment-heading" className="text-lg font-extrabold text-navy-900">Payment method</h2>
+              <div className="flex items-center gap-3">
+                <IconTile>
+                  <CardIcon />
+                </IconTile>
+                <h2 id="review-payment-heading" className="text-lg font-extrabold text-navy-900">Payment method</h2>
+              </div>
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-md border border-brand-300 bg-brand-50 px-4 py-4">
                 <input
                   type="radio"
@@ -468,8 +492,13 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
               </label>
             </section>
             <section aria-labelledby="review-order-heading" className="mt-6">
-              <h2 id="review-order-heading" className="text-lg font-extrabold text-navy-900">Review</h2>
-              <dl className="mt-3 divide-y divide-navy-100 border-y border-navy-100 text-sm">
+              <div className="flex items-center gap-3">
+                <IconTile>
+                  <ClipboardIcon />
+                </IconTile>
+                <h2 id="review-order-heading" className="text-lg font-extrabold text-navy-900">Review</h2>
+              </div>
+              <dl className="mt-4 divide-y divide-navy-100 border-y border-navy-100 text-sm">
               <div className="py-3">
                 <dt className="font-semibold text-navy-900">Customer</dt>
                 <dd className="mt-1 text-steel-600">
@@ -525,7 +554,10 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
       </div>
 
       <aside aria-label="Order review" className="card min-w-0 h-fit p-5 lg:sticky lg:top-36">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">Order summary</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-navy-900">Order summary</h2>
+          <span className="chip">{items.length} {items.length === 1 ? "item" : "items"}</span>
+        </div>
         <ul className="mt-4 divide-y divide-navy-100 text-sm">
           {items.map((line) => (
             <li key={line.productId} className="py-3">
@@ -545,7 +577,12 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
                   disabled={line.maxQuantity < 1}
                   onChange={(value) => updateQuantity(line.productId, value)}
                 />
-                {line.maxQuantity < 1 ? <div className="mt-2 flex items-center justify-between gap-2 text-xs font-semibold text-signal-700"><span>Out of stock.</span><button type="button" className="underline" onClick={() => removeItem(line.productId)}>Remove item</button></div> : null}
+                {line.maxQuantity < 1 ? (
+                  <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-signal-50 px-2.5 py-1.5 text-xs font-semibold text-signal-700">
+                    <span>Out of stock.</span>
+                    <button type="button" className="min-h-6 underline" onClick={() => removeItem(line.productId)}>Remove item</button>
+                  </div>
+                ) : null}
               </div>
             </li>
           ))}
@@ -644,6 +681,62 @@ function AddressFields({
         <input autoComplete="postal-code" className="field" value={address.postalCode} onChange={(event) => onChange("postalCode", event.target.value)} />
       </label>
     </div>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CheckIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} aria-hidden>
+      <path d="M5 13l4 4 10-10" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TruckIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <path d="M3 7h10v9H3z" strokeLinejoin="round" />
+      <path d="M13 10h4l3 3v3h-7z" strokeLinejoin="round" />
+      <circle cx="7" cy="18" r="1.6" />
+      <circle cx="17" cy="18" r="1.6" />
+    </svg>
+  );
+}
+
+function ClipboardIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <rect x="6" y="4" width="12" height="17" rx="2" />
+      <path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" strokeLinecap="round" />
+      <path d="M9 11h6M9 15h6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CardIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <path d="M3 10h18" strokeLinecap="round" />
+    </svg>
   );
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "@/components/cards/ProductCard";
+import { IconTile } from "@/components/ui/IconTile";
 import { filterProducts } from "@/lib/search";
 import type { Product } from "@/lib/types";
 import { cn, formatNumber } from "@/lib/utils";
@@ -382,8 +383,14 @@ export function ClearanceBrowser({
         ) : null}
 
         {results.length === 0 ? (
-          <div className="mt-8 rounded-card border border-dashed border-navy-200 bg-navy-50/60 p-6 text-center sm:p-10">
-            <p className="text-base font-bold text-navy-900">No clearance stock matches those filters</p>
+          <div className="card mx-auto mt-8 flex max-w-xl flex-col items-center p-6 text-center sm:p-10">
+            <IconTile>
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+              </svg>
+            </IconTile>
+            <p className="mt-4 text-base font-bold text-navy-900">No clearance stock matches those filters</p>
             <p className="mx-auto mt-2 max-w-md text-sm text-steel-600">
               Try widening your filters or clearing the search. You can also send us an enquiry.
             </p>
@@ -400,7 +407,7 @@ export function ClearanceBrowser({
           <div
             className={cn(
               "mt-6 grid gap-5",
-              layout === "grid" ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1",
+              layout === "grid" ? "sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4" : "grid-cols-1",
             )}
           >
             {results.map((product) => (

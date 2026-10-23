@@ -62,7 +62,7 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
   return (
     <article
       className={cn(
-        "group relative flex overflow-hidden rounded-card border border-navy-100 bg-white shadow-card transition-shadow hover:shadow-lift",
+        "card card-interactive group relative flex overflow-hidden",
         list ? "flex-col sm:flex-row" : "h-full flex-col",
       )}
     >
@@ -95,21 +95,21 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
       </Link>
 
       <div className={cn("flex min-w-0 flex-1 flex-col p-4", list ? "sm:p-5" : "")}>
-        <div className="flex items-start justify-between gap-3">
-          {product.brand ? <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-700">{product.brand}</p> : null}
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          {product.brand ? <p className="min-w-0 truncate text-[11px] font-bold uppercase tracking-[0.14em] text-brand-700">{product.brand}</p> : null}
           <StatusPill status={product.status} />
         </div>
 
-        <h3 className={cn("mt-2 line-clamp-2 font-bold leading-snug text-navy-900", list ? "text-lg" : "min-h-10 text-[15px]")}>
+        <h3 className={cn("mt-2 line-clamp-2 break-words font-bold leading-snug text-navy-900", list ? "text-lg" : "min-h-10 text-[15px]")}>
           <Link href={`/product/${product.slug}`} className="hover:text-brand-700">
             {product.name}
           </Link>
         </h3>
 
         <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">SKU</dt>
-            <dd className="font-semibold text-navy-800">{product.sku}</dd>
+            <dd className="truncate font-semibold text-navy-800" title={product.sku}>{product.sku}</dd>
           </div>
           <div className="min-w-0">
             <dt className="text-steel-500">Part number</dt>
@@ -117,15 +117,15 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
               {product.part_number}
             </dd>
           </div>
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">Quantity available</dt>
-            <dd className="font-semibold text-navy-800">
+            <dd className="break-words font-semibold text-navy-800">
               {product.quantity_available === null ? "Contact for quantity" : `${formatNumber(product.quantity_available)} units`}
             </dd>
           </div>
-          <div>
+          <div className="min-w-0">
             <dt className="text-steel-500">Added</dt>
-            <dd className="font-semibold text-navy-800">{relativeAdded(product.added_date)}</dd>
+            <dd className="break-words font-semibold text-navy-800">{relativeAdded(product.added_date)}</dd>
           </div>
         </dl>
 

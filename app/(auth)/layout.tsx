@@ -5,5 +5,11 @@ export const metadata: Metadata = {
 };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return <section className="section bg-navy-50"><div className="shell flex min-h-[65vh] items-center justify-center">{children}</div></section>;
+  return (
+    <section className="section bg-navy-50">
+      <div className="shell flex min-h-[70vh] flex-col items-center justify-center py-6">
+        {children}
+      </div>
+    </section>
+  );
 }

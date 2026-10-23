@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { IconTile } from "@/components/ui/IconTile";
 import { ConditionPill, ListingBadges, StatusPill } from "@/components/ui/Badge";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { SpecTable } from "@/components/product/SpecTable";
@@ -68,6 +69,45 @@ export default function EquipmentDetailPage({ params }: { params: { item: string
               {unit.name}
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-steel-600">{unit.description}</p>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="card flex items-center gap-3 p-3">
+                <IconTile>
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                    <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="12" cy="12" r="9" />
+                  </svg>
+                </IconTile>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-steel-500">Condition</p>
+                  <p className="truncate text-sm font-bold text-navy-900">{unit.condition}</p>
+                </div>
+              </div>
+              <div className="card flex items-center gap-3 p-3">
+                <IconTile>
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                    <path d="M12 21s-7-6.2-7-11.2A7 7 0 0 1 19 9.8C19 14.8 12 21 12 21Z" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="12" cy="9.5" r="2.3" />
+                  </svg>
+                </IconTile>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-steel-500">Location</p>
+                  <p className="truncate text-sm font-bold text-navy-900">{unit.location}</p>
+                </div>
+              </div>
+              <div className="card flex items-center gap-3 p-3">
+                <IconTile>
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3.5 2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </IconTile>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-steel-500">Operating hours</p>
+                  <p className="truncate text-sm font-bold text-navy-900">{formatNumber(unit.operating_hours)} h</p>
+                </div>
+              </div>
+            </div>
 
             <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 rounded-card border border-navy-100 bg-white p-4 text-xs shadow-card">
               <Meta label="Equipment reference" value={unit.reference} />
@@ -151,7 +191,7 @@ export default function EquipmentDetailPage({ params }: { params: { item: string
         </div>
       </section>
 
-      <section className="section">
+      <section className="section section-alt">
         <div className="shell">
           <SectionHeading
             eyebrow="More equipment"
@@ -163,7 +203,7 @@ export default function EquipmentDetailPage({ params }: { params: { item: string
               <Link
                 key={item.id}
                 href={`/equipment/${item.slug}`}
-                className="group flex items-center gap-4 rounded-card border border-navy-100 bg-white p-4 shadow-card transition-shadow hover:shadow-lift"
+                className="card card-interactive group flex items-center gap-4 p-4"
               >
                 <span className="relative h-16 w-20 shrink-0 overflow-hidden rounded border border-navy-100 bg-navy-50">
                   <Image src={item.images[0]} alt="" fill sizes="80px" className="object-cover" />

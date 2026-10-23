@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { IconTile } from "@/components/ui/IconTile";
 import { ConditionPill, ListingBadges, StatusPill } from "@/components/ui/Badge";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { LotActions } from "@/components/lots/LotActions";
@@ -62,6 +63,44 @@ export default async function LotDetailPage({ params }: { params: { "lot-referen
             </div>
             <h1 className="mt-3 text-2xl font-extrabold leading-tight text-navy-900 sm:text-3xl">{lot.name}</h1>
             <p className="mt-3 text-sm leading-relaxed text-steel-600">{lot.description}</p>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="card flex items-center gap-3 p-3">
+                <IconTile>
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                    <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="12" cy="12" r="9" />
+                  </svg>
+                </IconTile>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-steel-500">Condition</p>
+                  <p className="truncate text-sm font-bold text-navy-900">{lot.condition}</p>
+                </div>
+              </div>
+              <div className="card flex items-center gap-3 p-3">
+                <IconTile>
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                    <path d="M12 21s-7-6.2-7-11.2A7 7 0 0 1 19 9.8C19 14.8 12 21 12 21Z" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="12" cy="9.5" r="2.3" />
+                  </svg>
+                </IconTile>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-steel-500">Warehouse</p>
+                  <p className="truncate text-sm font-bold text-navy-900">{lot.location}</p>
+                </div>
+              </div>
+              <div className="card flex items-center gap-3 p-3">
+                <IconTile>
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                    <path d="M3 7h18M3 12h18M3 17h18" strokeLinecap="round" />
+                  </svg>
+                </IconTile>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-steel-500">Line items</p>
+                  <p className="truncate text-sm font-bold text-navy-900">{lot.items.length} lines &middot; {formatNumber(lot.total_quantity)} units</p>
+                </div>
+              </div>
+            </div>
 
             <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 rounded-card border border-navy-100 bg-white p-4 text-xs shadow-card">
               <Meta label="Lot reference" value={lot.lot_reference} />
@@ -152,7 +191,7 @@ export default async function LotDetailPage({ params }: { params: { "lot-referen
         </section>
       ) : null}
 
-      <section className="section border-t border-navy-100 bg-navy-50/40">
+      <section className="section section-alt">
         <div className="shell">
           <SectionHeading
             eyebrow="More lots"
@@ -164,7 +203,7 @@ export default async function LotDetailPage({ params }: { params: { "lot-referen
               <Link
                 key={item.id}
                 href={`/lots/${item.lot_reference}`}
-                className="flex flex-col justify-between gap-3 rounded-card border border-navy-100 bg-white p-4 sm:flex-row sm:items-center"
+                className="card card-interactive flex flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center"
               >
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-wide text-brand-700">

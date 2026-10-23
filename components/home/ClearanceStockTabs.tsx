@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ProductCard } from "@/components/cards/ProductCard";
 import type { Product } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -15,29 +15,9 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-export function ClearanceStockTabs({ products }: { products: Product[] }) {
+export function ClearanceStockTabs({ productsByTab }: { productsByTab: Record<TabId, Product[]> }) {
   const [tab, setTab] = useState<TabId>("latest");
-
-  const list = useMemo(() => {
-    const available = products.filter((p) => p.status !== "Sold");
-    switch (tab) {
-      case "lowest":
-        return [...available].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity)).slice(0, 8);
-      case "bulk":
-        return available
-          .filter((p) => p.listing_type === "Whole Lot" || p.category === "lots-bulk-clearance" || (p.quantity_available ?? 0) >= 200)
-          .sort((a, b) => (b.quantity_available ?? -1) - (a.quantity_available ?? -1))
-          .slice(0, 8);
-      case "equipment":
-        return available
-          .filter((p) => p.category === "equipment" || p.badges.includes("EQUIPMENT"))
-          .slice(0, 8);
-      default:
-        return [...available]
-          .sort((a, b) => new Date(b.added_date).getTime() - new Date(a.added_date).getTime())
-          .slice(0, 8);
-    }
-  }, [products, tab]);
+  const list = productsByTab[tab];
 
   return (
     <div>

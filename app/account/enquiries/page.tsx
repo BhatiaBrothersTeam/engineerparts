@@ -1,5 +1,18 @@
 import { EnquiriesView } from "@/components/account/AccountViews";
+import { AccountSectionHeader } from "@/components/account/AccountSectionHeader";
 import { getAccountResource } from "@/lib/auth-server";
 import type { CustomerEnquiry } from "@/lib/account";
 
-export default async function EnquiriesPage() { const data = await getAccountResource<{ ok: true; enquiries: CustomerEnquiry[] }>("enquiries"); return <div><h2 className="text-xl font-extrabold">Enquiries / RFQs</h2><p className="mt-1 text-sm text-steel-600">Your submitted enquiries, saved to your verified customer account.</p><div className="mt-5">{data ? <EnquiriesView enquiries={data.enquiries} /> : <p className="card p-5 text-sm text-signal-700">Enquiries are temporarily unavailable.</p>}</div></div>; }
+export default async function EnquiriesPage() {
+  const data = await getAccountResource<{ ok: true; enquiries: CustomerEnquiry[] }>("enquiries");
+  return (
+    <div>
+      <AccountSectionHeader
+        eyebrow="Requests for quote"
+        title="Enquiries / RFQs"
+        description="Your submitted enquiries, saved to your verified customer account."
+      />
+      {data ? <EnquiriesView enquiries={data.enquiries} /> : <p className="card p-5 text-sm text-signal-700">Enquiries are temporarily unavailable.</p>}
+    </div>
+  );
+}

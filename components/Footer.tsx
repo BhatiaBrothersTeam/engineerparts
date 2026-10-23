@@ -13,7 +13,7 @@ export function Footer() {
   return (
     <footer className="border-t border-navy-800 bg-navy-950 text-steel-300">
       <div className="shell py-10 sm:py-14">
-        <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(2,1fr)]">
+        <div className="grid gap-10 lg:grid-cols-[1.2fr_repeat(3,1fr)]">
           <div>
             <Logo light />
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-steel-400">
@@ -50,9 +50,17 @@ export function Footer() {
                 { label: "About", href: "/about" },
                 { label: "Contact", href: "/contact" },
                 { label: "Enquiry", href: "/enquiry" },
-                { label: "Cart", href: "/cart" },
+                { label: "FAQ", href: "/faq" },
+              ]}
+            />
+
+            <FooterColumn
+              title="Legal"
+              links={[
                 { label: "Privacy Policy", href: "/privacy-policy" },
                 { label: "Terms & Conditions", href: "/terms" },
+                { label: "Returns & Refunds Policy", href: "/returns-refunds" },
+                { label: "Shipping & Delivery Policy", href: "/shipping-delivery" },
               ]}
             />
           </div>
@@ -68,6 +76,15 @@ export function Footer() {
             </Link>
             <Link href="/terms" className="hover:text-white">
               Terms &amp; Conditions
+            </Link>
+            <Link href="/returns-refunds" className="hover:text-white">
+              Returns &amp; Refunds
+            </Link>
+            <Link href="/shipping-delivery" className="hover:text-white">
+              Shipping &amp; Delivery
+            </Link>
+            <Link href="/faq" className="hover:text-white">
+              FAQ
             </Link>
             <Link href="/contact" className="hover:text-white">
               Contact

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHmac, randomBytes } from "node:crypto";
+import { unstable_cache } from "next/cache";
 import { products as localProducts } from "@/lib/data/products";
 import type {
   CartTotals,
@@ -96,8 +97,22 @@ function text(value: unknown, fallback = ""): string {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
+const HTML_ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&nbsp;": " ",
+  "&quot;": '"',
+  "&#039;": "'",
+  "&apos;": "'",
+  "&lt;": "<",
+  "&gt;": ">",
+};
+
+function decodeEntities(value: string): string {
+  return value.replace(/&(?:amp|nbsp|quot|#039|apos|lt|gt);/g, (entity) => HTML_ENTITIES[entity] ?? entity).replace(/\s+/g, " ").trim();
+}
+
 function stripHtml(value: string): string {
-  return value.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
+  return decodeEntities(value.replace(/<[^>]*>/g, " "));
 }
 
 function metadata(product: WooProduct, key: string): unknown {
@@ -123,7 +138,7 @@ function mapProduct(product: WooProduct): Product {
     .map((value) => text(value))
     .find((value) => isPublicProductValue(value)) ?? "";
   const brand = [product.brands?.[0]?.name, metadata(product, "brand"), attribute(product, "Brand"), manufacturer]
-    .map((value) => text(value))
+    .map((value) => decodeEntities(text(value)))
     .find((value) => isPublicProductValue(value, "brand")) ?? "";
   const warehouse = text(metadata(product, "warehouse_location"));
   const conditionNotes = text(metadata(product, "condition_notes"));
@@ -141,14 +156,14 @@ function mapProduct(product: WooProduct): Product {
   return {
     id: String(product.id),
     sku: product.sku,
-    name: product.name,
+    name: decodeEntities(product.name),
     slug: product.slug,
     brand,
-    manufacturer: isPublicProductValue(manufacturer) ? manufacturer : "",
+    manufacturer: isPublicProductValue(manufacturer) ? decodeEntities(manufacturer) : "",
     part_number: partNumber,
-    model: isPublicProductValue(model) ? model : "",
+    model: isPublicProductValue(model) ? decodeEntities(model) : "",
     category: category(product),
-    subcategory: product.categories[0]?.name ?? "Uncategorised",
+    subcategory: product.categories[0]?.name ? decodeEntities(product.categories[0].name) : "Uncategorised",
     description: stripHtml(product.description || product.short_description),
     condition: conditions.includes(conditionValue as ConditionGrade) ? (conditionValue as ConditionGrade) : "Not provided",
     condition_notes: isPublicProductValue(conditionNotes) ? conditionNotes : "",
@@ -164,7 +179,7 @@ function mapProduct(product: WooProduct): Product {
       ? product.images.map((image) => image.src)
       : [`${process.env.WOOCOMMERCE_URL?.replace(/\/$/, "")}/wp-content/plugins/woocommerce/assets/images/placeholder.png`],
     specifications: product.attributes
-      .map((item) => ({ label: item.name.trim(), value: item.options.join(", ").trim() }))
+      .map((item) => ({ label: decodeEntities(item.name), value: decodeEntities(item.options.join(", ")) }))
       .filter((item) => isPublicProductValue(item.label) && isPublicProductValue(item.value)),
     documents: [],
     status:
@@ -307,31 +322,39 @@ async function getStoreProducts(url: string): Promise<Product[]> {
   return [firstPage, ...remainingPages].flatMap((page) => page.products).map(mapProduct);
 }
 
+const getCachedWooProducts = unstable_cache(
+  async (url: string, key: string, secret: string): Promise<Product[]> => {
+    const config = { url, key, secret };
+    try {
+      const [firstPage, currency] = await Promise.all([
+        fetchPage(1, config),
+        fetchStoreCurrency(config.url),
+      ]);
+      const remainingPages = await Promise.all(
+        Array.from(
+          { length: Math.max(0, firstPage.totalPages - 1) },
+          (_, index) => fetchPage(index + 2, config),
+        ),
+      );
+
+      return [firstPage, ...remainingPages]
+        .flatMap((page) => page.products)
+        .map((product) => mapProduct({ ...product, currency_code: currency }));
+    } catch (error) {
+      console.warn(
+        `WooCommerce REST API unavailable (${error instanceof Error ? error.message : "unknown error"}); using the public Store API.`,
+      );
+      return getStoreProducts(url);
+    }
+  },
+  ["woocommerce-products-v1"],
+  { revalidate: 300 },
+);
+
 export async function getProducts(): Promise<Product[]> {
   const config = configuration();
   if (!config) return localProducts;
-
-  try {
-    const [firstPage, currency] = await Promise.all([
-      fetchPage(1, config),
-      fetchStoreCurrency(config.url),
-    ]);
-    const remainingPages = await Promise.all(
-      Array.from(
-        { length: Math.max(0, firstPage.totalPages - 1) },
-        (_, index) => fetchPage(index + 2, config),
-      ),
-    );
-
-    return [firstPage, ...remainingPages]
-      .flatMap((page) => page.products)
-      .map((product) => mapProduct({ ...product, currency_code: currency }));
-  } catch (error) {
-    console.warn(
-      `WooCommerce REST API unavailable (${error instanceof Error ? error.message : "unknown error"}); using the public Store API.`,
-    );
-    return getStoreProducts(config.url);
-  }
+  return getCachedWooProducts(config.url, config.key, config.secret);
 }
 
 export async function getProduct(slug: string): Promise<Product | undefined> {

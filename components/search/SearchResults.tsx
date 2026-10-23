@@ -6,6 +6,8 @@ import { ProductCard } from "@/components/cards/ProductCard";
 import { LotCard } from "@/components/cards/LotCard";
 import { EquipmentCard } from "@/components/cards/EquipmentCard";
 import { SearchBar } from "@/components/SearchBar";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { IconTile } from "@/components/ui/IconTile";
 import { filterProducts, search, suggestProductQuery } from "@/lib/search";
 import { lots } from "@/lib/data/lots";
 import { equipment } from "@/lib/data/equipment";
@@ -52,10 +54,27 @@ export function SearchResults({ initialQuery, products }: { initialQuery: string
       <SearchBar variant="hero" initialQuery={query} />
 
       {!query.trim() ? (
-        <p className="mt-8 text-sm text-steel-600">Enter a brand, SKU, part number, model or product name.</p>
+        <div className="card mx-auto mt-8 flex max-w-xl flex-col items-center p-10 text-center">
+          <IconTile>
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+            </svg>
+          </IconTile>
+          <p className="mt-4 text-base font-bold text-navy-900">Search the clearance catalogue</p>
+          <p className="mt-2 max-w-md text-sm text-steel-600">
+            Enter a brand, SKU, part number, model or product name.
+          </p>
+        </div>
       ) : resultCount === 0 ? (
-        <div className="mt-8 rounded-card border border-dashed border-navy-200 bg-navy-50/60 p-10 text-center">
-          <p className="text-base font-bold text-navy-900">No matching clearance stock</p>
+        <div className="card mx-auto mt-8 flex max-w-xl flex-col items-center p-10 text-center">
+          <IconTile>
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+            </svg>
+          </IconTile>
+          <p className="mt-4 text-base font-bold text-navy-900">No matching clearance stock</p>
           <p className="mx-auto mt-2 max-w-md text-sm text-steel-600">
             Try a different part number, or send an enquiry and we will look through warehouse stock
             that is not yet listed.
@@ -69,9 +88,14 @@ export function SearchResults({ initialQuery, products }: { initialQuery: string
               ?
             </p>
           ) : null}
-          <a href="/contact" className="btn-navy btn-sm mt-5 inline-flex">
-            Send an enquiry
-          </a>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <Link href="/clearance" className="btn-outline btn-sm">
+              Browse all clearance
+            </Link>
+            <a href="/contact" className="btn-navy btn-sm">
+              Send an enquiry
+            </a>
+          </div>
         </div>
       ) : (
         <div className="mt-8 space-y-12">
@@ -81,7 +105,7 @@ export function SearchResults({ initialQuery, products }: { initialQuery: string
 
           {productItems.length ? (
             <div>
-              <h2 className="text-lg font-extrabold text-navy-900">Clearance stock</h2>
+              <SectionHeading eyebrow="Products" title="Clearance stock" />
               <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {productItems.map((product) => (
                   <ProductCard key={product.id} product={product} />
@@ -92,7 +116,7 @@ export function SearchResults({ initialQuery, products }: { initialQuery: string
 
           {lotItems.length ? (
             <div>
-              <h2 className="text-lg font-extrabold text-navy-900">Clearance lots</h2>
+              <SectionHeading eyebrow="Bulk inventory" title="Clearance lots" />
               <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {lotItems.map((lot) => (
                   <LotCard key={lot.id} lot={lot} />
@@ -103,7 +127,7 @@ export function SearchResults({ initialQuery, products }: { initialQuery: string
 
           {equipmentItems.length ? (
             <div>
-              <h2 className="text-lg font-extrabold text-navy-900">Equipment</h2>
+              <SectionHeading eyebrow="Assets" title="Equipment" />
               <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {equipmentItems.map((unit) => (
                   <EquipmentCard key={unit.id} unit={unit} />

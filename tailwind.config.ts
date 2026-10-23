@@ -71,7 +71,7 @@ const config: Config = {
         card: "6px",
       },
       maxWidth: {
-        shell: "1320px",
+        shell: "1600px",
       },
       keyframes: {
         "fade-up": {

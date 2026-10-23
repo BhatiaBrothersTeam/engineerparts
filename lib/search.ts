@@ -73,8 +73,7 @@ function typoLimit(word: string): number {
   return word.length >= 6 ? 2 : word.length >= 4 ? 1 : 0;
 }
 
-function closestProductToken(products: Product[], word: string): string | undefined {
-  const candidates = Array.from(new Set(products.flatMap((product) => normalize(productSearchText(product)).split(/\s+/))));
+function closestProductToken(candidates: string[], word: string): string | undefined {
   let closest: string | undefined;
   let closestDistance = typoLimit(word) + 1;
   for (const candidate of candidates) {
@@ -93,13 +92,16 @@ export function suggestProductQuery(products: Product[], query: string): string 
   const normalizedQuery = normalize(query);
   if (!normalizedQuery) return undefined;
 
-  const exactMatch = products.some((product) => normalize(productSearchText(product)).includes(normalizedQuery));
+  const productTexts = products.map((product) => normalize(productSearchText(product)));
+  const exactMatch = productTexts.some((text) => text.includes(normalizedQuery));
   if (exactMatch) return undefined;
 
+  const candidateSet = new Set(productTexts.flatMap((text) => text.split(/\s+/)));
+  const candidates = Array.from(candidateSet);
   const words = normalizedQuery.split(/\s+/);
   const suggestions = words.map((word) => {
-    const exactWord = products.some((product) => normalize(productSearchText(product)).split(/\s+/).includes(word));
-    return exactWord ? word : closestProductToken(products, word);
+    const exactWord = candidateSet.has(word);
+    return exactWord ? word : closestProductToken(candidates, word);
   });
   return suggestions.every(Boolean) && suggestions.some((word, index) => word !== words[index])
     ? suggestions.join(" ")
