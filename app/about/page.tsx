@@ -73,6 +73,10 @@ export default function AboutPage() {
               Engineerparts.com helps businesses browse industrial equipment, spare parts, tools and engineering products, including available clearance stock.
             </p>
             <p className="mt-3 text-sm leading-relaxed text-steel-700">
+              We deal in surplus stock, dead stock and engineered parts &mdash; aged and clearance inventory offered
+              individually at retail or in bulk quantities for wholesale buyers.
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-steel-700">
               Review the information published with each listing, buy eligible items online, or contact our team when you need more details before making a decision.
             </p>
           </div>

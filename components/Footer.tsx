@@ -2,24 +2,38 @@
 
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { CategoryIcon } from "@/components/ui/CategoryIcon";
 import { track } from "@/lib/analytics";
+import type { CategorySummaryItem } from "@/lib/categories";
 import { CONTACT_EMAIL, CONTACT_PHONE, WHATSAPP_NUMBER, whatsappLink } from "@/lib/utils";
 
-export function Footer() {
+const MAX_FOOTER_CATEGORIES = 6;
+
+export function Footer({ categories = [] }: { categories?: CategorySummaryItem[] }) {
   function onWhatsApp() {
     track("whatsapp_click", { source: "Footer" });
   }
 
+  const footerCategories = categories.slice(0, MAX_FOOTER_CATEGORIES);
+
   return (
     <footer className="border-t border-navy-800 bg-navy-950 text-steel-300">
       <div className="shell py-10 sm:py-14">
-        <div className="grid gap-10 lg:grid-cols-[1.2fr_repeat(3,1fr)]">
+        <div className="grid gap-10 lg:grid-cols-[1.1fr_repeat(4,1fr)]">
           <div>
             <Logo light />
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-steel-400">
               Industrial equipment, spare parts, tools and clearance stock for business buyers.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
+            <p className="mt-3 max-w-xs text-xs font-semibold uppercase tracking-wide text-brand-300">
+              Surplus stock, dead stock &amp; engineered parts
+            </p>
+            <div className="mt-5">
+              <Link href="/enquiry" className="btn-primary btn-sm">
+                Request a Quote
+              </Link>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
               {CONTACT_EMAIL ? <a className="chip-dark" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> : null}
               {CONTACT_PHONE ? <a className="chip-dark" href={`tel:${CONTACT_PHONE}`}>{CONTACT_PHONE}</a> : null}
               {WHATSAPP_NUMBER ? <a
@@ -39,17 +53,37 @@ export function Footer() {
               title="Clearance Stock"
               links={[
                 { label: "All Clearance Stock", href: "/clearance" },
-                { label: "Recently Added", href: "/recently-added" },
+                { label: "Retail", href: "/clearance/retail" },
+                { label: "Wholesale", href: "/clearance/wholesale" },
+                { label: "New Arrivals", href: "/recently-added" },
                 { label: "Brands", href: "/brands" },
               ]}
             />
+
+            {footerCategories.length ? (
+              <div>
+                <h2 className="eyebrow text-white">Categories</h2>
+                <ul className="mt-4 space-y-2.5 text-sm">
+                  {footerCategories.map((category) => (
+                    <li key={category.slug}>
+                      <Link
+                        href={`/clearance/${category.slug}`}
+                        className="flex items-center gap-2 transition-colors hover:text-white"
+                      >
+                        <CategoryIcon category={category.slug} className="h-3.5 w-3.5 shrink-0 text-steel-500" />
+                        <span className="truncate">{category.label}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
             <FooterColumn
               title="Company"
               links={[
                 { label: "About", href: "/about" },
-                { label: "Contact", href: "/contact" },
-                { label: "Enquiry", href: "/enquiry" },
+                { label: "Request a Quote", href: "/enquiry" },
                 { label: "FAQ", href: "/faq" },
               ]}
             />
@@ -70,26 +104,7 @@ export function Footer() {
           <p>
             &copy; {new Date().getFullYear()} Engineerparts.com. All rights reserved.
           </p>
-          <div className="flex flex-wrap gap-5">
-            <Link href="/privacy-policy" className="hover:text-white">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-white">
-              Terms &amp; Conditions
-            </Link>
-            <Link href="/returns-refunds" className="hover:text-white">
-              Returns &amp; Refunds
-            </Link>
-            <Link href="/shipping-delivery" className="hover:text-white">
-              Shipping &amp; Delivery
-            </Link>
-            <Link href="/faq" className="hover:text-white">
-              FAQ
-            </Link>
-            <Link href="/contact" className="hover:text-white">
-              Contact
-            </Link>
-          </div>
+          <p>Dealing in surplus stock, dead stock and engineered parts.</p>
         </div>
       </div>
     </footer>

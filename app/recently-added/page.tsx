@@ -8,9 +8,9 @@ import { formatDate, formatNumber } from "@/lib/utils";
 import { getProducts } from "@/lib/woocommerce";
 
 export const metadata: Metadata = {
-  title: "Recently Added",
+  title: "New Arrivals",
   description:
-    "Explore recently added industrial products and clearance stock.",
+    "Explore new arrivals in industrial products and clearance stock.",
 };
 
 export default async function RecentlyAddedPage() {
@@ -22,9 +22,9 @@ export default async function RecentlyAddedPage() {
   return (
     <>
       <PageHero
-        breadcrumbs={[{ label: "Recently Added" }]}
-        eyebrow="Recently added"
-        title="Recently added products"
+        breadcrumbs={[{ label: "New Arrivals" }]}
+        eyebrow="New arrivals"
+        title="New arrivals"
         description="Explore the latest industrial products added to our catalogue."
         stats={recentProducts.length ? [[formatNumber(recentProducts.length), "New listings"]] : undefined}
       />

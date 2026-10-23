@@ -9,7 +9,6 @@ import { cn, formatNumber } from "@/lib/utils";
 
 interface Facets {
   brands: string[];
-  manufacturers: string[];
   categories: { slug: string; name: string }[];
   subcategories: string[];
   conditions: string[];
@@ -21,7 +20,6 @@ interface Facets {
 
 interface Filters {
   brands: string[];
-  manufacturers: string[];
   categories: string[];
   subcategories: string[];
   conditions: string[];
@@ -35,7 +33,6 @@ interface Filters {
 
 const EMPTY_FILTERS: Filters = {
   brands: [],
-  manufacturers: [],
   categories: [],
   subcategories: [],
   conditions: [],
@@ -48,7 +45,7 @@ const EMPTY_FILTERS: Filters = {
 };
 
 const SORTS = [
-  { id: "recent", label: "Recently Added" },
+  { id: "recent", label: "New Arrivals" },
   { id: "price-asc", label: "Price: low to high" },
   { id: "price-desc", label: "Price: high to low" },
   { id: "quantity", label: "Quantity Available" },
@@ -94,7 +91,6 @@ export function ClearanceBrowser({
     (
       [
         "brands",
-        "manufacturers",
         "categories",
         "subcategories",
         "conditions",
@@ -116,7 +112,6 @@ export function ClearanceBrowser({
     return filterProducts(items, {
       q: query,
       brands: filters.brands,
-      manufacturers: filters.manufacturers,
       categories: lockedCategory ? undefined : filters.categories,
       subcategories: filters.subcategories,
       conditions: filters.conditions,
@@ -160,7 +155,6 @@ export function ClearanceBrowser({
     const chips: { key: string; label: string; onRemove: () => void }[] = [];
     const groups: { key: keyof Filters; title: string; label?: (value: string) => string }[] = [
       { key: "brands", title: "Brand" },
-      { key: "manufacturers", title: "Manufacturer" },
       { key: "categories", title: "Category", label: (value) => facets.categories.find((c) => c.slug === value)?.name ?? value },
       { key: "subcategories", title: "Subcategory" },
       { key: "conditions", title: "Condition" },
@@ -209,9 +203,6 @@ export function ClearanceBrowser({
 
       <FilterGroup title="Brand" defaultOpen>
         <CheckList options={facets.brands} selected={filters.brands} onToggle={(v) => toggle("brands", v)} />
-      </FilterGroup>
-      <FilterGroup title="Manufacturer">
-        <CheckList options={facets.manufacturers} selected={filters.manufacturers} onToggle={(v) => toggle("manufacturers", v)} />
       </FilterGroup>
       {!lockedCategory ? (
         <FilterGroup title="Category">

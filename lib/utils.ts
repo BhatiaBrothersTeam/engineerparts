@@ -97,6 +97,10 @@ export function whatsappLink(message: string): string {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
+export function mailtoLink(email: string, subject: string, body: string): string {
+  return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
 export function productWhatsAppMessage(item: {
   name: string;
   sku: string;
@@ -152,3 +156,6 @@ export function absoluteUrl(path: string): string {
   }
   return `https://engineerparts.com${path}`;
 }
+
+// Brand logo resolution now lives in lib/brandLogos.ts, reading from the
+// maintained data/brand-logos.xlsx workbook instead of a hardcoded map.

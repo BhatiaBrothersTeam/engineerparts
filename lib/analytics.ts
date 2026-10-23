@@ -15,6 +15,7 @@ export type AnalyticsEventName =
   | "bulk_deal_enquiry"
   | "clearance_alert_signup"
   | "whatsapp_click"
+  | "email_click"
   | "document_download"
   | "brand_view";
 

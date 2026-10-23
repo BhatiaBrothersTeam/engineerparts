@@ -66,14 +66,20 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
         list ? "flex-col sm:flex-row" : "h-full flex-col",
       )}
     >
+      <Link
+        href={`/product/${product.slug}`}
+        className="absolute inset-0 z-0"
+        aria-label={product.name}
+      />
       <SaveProductButton productId={product.id} compact className="absolute right-3 top-3 z-10" />
       <Link
         href={`/product/${product.slug}`}
         className={cn(
-          "relative block shrink-0 overflow-hidden bg-navy-50",
+          "relative z-10 block shrink-0 overflow-hidden bg-navy-50",
           list ? "sm:w-64" : "",
         )}
-        aria-label={product.name}
+        aria-hidden="true"
+        tabIndex={-1}
       >
         <div className={cn("relative", list ? "aspect-[4/3] sm:h-full sm:aspect-auto" : "aspect-[4/3]")}>
           <Image
@@ -101,7 +107,7 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
         </div>
 
         <h3 className={cn("mt-2 line-clamp-2 break-words font-bold leading-snug text-navy-900", list ? "text-lg" : "min-h-10 text-[15px]")}>
-          <Link href={`/product/${product.slug}`} className="hover:text-brand-700">
+          <Link href={`/product/${product.slug}`} className="relative z-10 hover:text-brand-700" tabIndex={-1} aria-hidden="true">
             {product.name}
           </Link>
         </h3>
@@ -143,7 +149,7 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
             <p className="text-xl font-extrabold tracking-tight text-navy-900">{priceLabel}</p>
           </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="relative z-10 mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {product.listing_type === "Whole Lot" ? (
               <button
                 type="button"

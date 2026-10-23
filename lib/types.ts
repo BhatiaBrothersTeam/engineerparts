@@ -134,6 +134,7 @@ export interface Brand {
   name: string;
   description: string;
   logoText: string;
+  logoUrl: string | null;
   sectors: string[];
   featured: boolean;
 }

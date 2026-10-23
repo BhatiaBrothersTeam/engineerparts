@@ -11,6 +11,9 @@ import { ToastProvider } from "@/components/providers/ToastProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { SavedProductsProvider } from "@/components/providers/SavedProductsProvider";
 import { EnquiryModal } from "@/components/modals/EnquiryModal";
+import { TopBar } from "@/components/TopBar";
+import { categorySummary } from "@/lib/categories";
+import { getProducts } from "@/lib/woocommerce";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,7 +43,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const products = await getProducts();
+  const categories = categorySummary(products);
+
   return (
     <html lang="en-AE" className={`${inter.variable} ${archivo.variable}`}>
       <body className="flex min-h-screen flex-col bg-white">
@@ -49,9 +55,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <SavedProductsProvider>
               <CartProvider>
                 <EnquiryProvider>
-                  <Header />
+                  <TopBar />
+                  <Header categories={categories} />
                   <main className="flex-1">{children}</main>
-                  <Footer />
+                  <Footer categories={categories} />
                   <FloatingWhatsApp />
                   <EnquiryModal />
                 </EnquiryProvider>

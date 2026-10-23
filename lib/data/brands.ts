@@ -1,5 +1,6 @@
 import type { Brand, Product } from "@/lib/types";
 import { isPublicProductValue } from "@/lib/utils";
+import { resolveBrandLogoUrl } from "@/lib/brandLogos";
 
 export const brands: Brand[] = [];
 export const FEATURED_BRANDS: Brand[] = [];
@@ -25,6 +26,7 @@ export function brandsFromProducts(products: Product[]): Brand[] {
         slug: brandSlug(name),
         name,
         logoText: name,
+        logoUrl: resolveBrandLogoUrl(name),
         description: `${brandProducts.length} currently listed ${name} product${brandProducts.length === 1 ? "" : "s"}.`,
         sectors: Array.from(new Set(brandProducts.map((product) => product.subcategory))).filter(Boolean),
         featured: false,

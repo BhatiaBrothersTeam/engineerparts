@@ -2,21 +2,37 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { SearchBar } from "@/components/SearchBar";
+import { CategoryIcon } from "@/components/ui/CategoryIcon";
 import { useCart } from "@/components/providers/CartProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { primaryNav } from "@/lib/nav";
 import { track } from "@/lib/analytics";
+import type { CategorySummaryItem } from "@/lib/categories";
 import { WHATSAPP_NUMBER, cn, whatsappLink } from "@/lib/utils";
 
-export function Header() {
+const NAV_ICON: Record<string, () => JSX.Element> = {
+  "/clearance": TagIcon,
+  "/brands": BuildingIcon,
+  "/recently-added": SparkleIcon,
+  "/about": InfoIcon,
+  "/contact": MailIcon,
+};
+
+const MAX_NAV_CATEGORIES = 8;
+
+export function Header({ categories = [] }: { categories?: CategorySummaryItem[] }) {
   const pathname = usePathname();
   const { count } = useCart();
   const { authenticated, customer, loading, logout } = useAuth();
+  const navCategories = categories.slice(0, MAX_NAV_CATEGORIES);
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [clearanceOpen, setClearanceOpen] = useState(false);
+  const [clearanceExpanded, setClearanceExpanded] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -26,20 +42,24 @@ export function Header() {
   useEffect(() => {
     setMobileOpen(false);
     setCategoriesOpen(false);
+    setCategoriesExpanded(false);
+    setClearanceOpen(false);
+    setClearanceExpanded(false);
     setAccountOpen(false);
   }, [pathname]);
 
   useEffect(() => {
-    if (!mobileOpen && !categoriesOpen && !accountOpen) return;
+    if (!mobileOpen && !categoriesOpen && !clearanceOpen && !accountOpen) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
       setMobileOpen(false);
       setCategoriesOpen(false);
+      setClearanceOpen(false);
       setAccountOpen(false);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [mobileOpen, categoriesOpen, accountOpen]);
+  }, [mobileOpen, categoriesOpen, clearanceOpen, accountOpen]);
 
   useEffect(() => {
     if (mobileOpen) {
@@ -122,7 +142,7 @@ export function Header() {
               <WhatsAppIcon />
               <span className="text-xs font-semibold">WhatsApp</span>
             </button> : null}
-            {authenticated ? <div className="relative hidden lg:block" onMouseEnter={() => setAccountOpen(true)} onMouseLeave={() => setAccountOpen(false)}><button type="button" onClick={() => setAccountOpen((open) => !open)} className="btn-signal btn-sm min-w-28" aria-haspopup="true" aria-expanded={accountOpen}><UserIcon /><span className="max-w-28 truncate">{accountLabel}</span></button>{accountOpen ? <div className="absolute right-0 top-full z-50 w-52 rounded-b-md border border-navy-100 bg-white p-2 shadow-lift"><AccountMenuLink href="/account">Dashboard</AccountMenuLink><AccountMenuLink href="/account/orders">Orders</AccountMenuLink><AccountMenuLink href="/account/enquiries">Enquiries</AccountMenuLink><AccountMenuLink href="/account/saved-products">Saved Products</AccountMenuLink><AccountMenuLink href="/account/profile">Profile</AccountMenuLink><button type="button" onClick={() => void logout()} className="block w-full rounded-md px-3 py-2 text-left text-sm font-semibold text-signal-700 hover:bg-navy-50">Sign out</button></div> : null}</div> : <Link href="/login" className="btn-signal btn-sm hidden min-w-28 lg:inline-flex"><UserIcon /><span>Login / Account</span></Link>}
+            {authenticated ? <div className="relative hidden lg:block" onMouseEnter={() => setAccountOpen(true)} onMouseLeave={() => setAccountOpen(false)}><button type="button" onClick={() => setAccountOpen((open) => !open)} className="btn-signal btn-sm min-w-28" aria-haspopup="true" aria-expanded={accountOpen}><UserIcon /><span className="max-w-28 truncate">{accountLabel}</span></button>{accountOpen ? <div className="absolute right-0 top-full z-50 w-56 rounded-b-md border border-navy-100 bg-white p-2 shadow-lift"><AccountMenuLink href="/account" icon={<UserIcon />}>Dashboard</AccountMenuLink><AccountMenuLink href="/account/orders" icon={<ReceiptIcon />}>Orders</AccountMenuLink><AccountMenuLink href="/account/enquiries" icon={<InboxIcon />}>Enquiries</AccountMenuLink><AccountMenuLink href="/account/saved-products" icon={<HeartIcon />}>Saved Products</AccountMenuLink><AccountMenuLink href="/account/profile" icon={<UserIcon />}>Profile</AccountMenuLink><button type="button" onClick={() => void logout()} className="mt-1 flex w-full items-center gap-2.5 rounded-md border-t border-navy-100 px-3 pt-2.5 pb-1.5 text-left text-sm font-semibold text-signal-700 hover:bg-navy-50"><LogoutIcon /> Sign out</button></div> : null}</div> : <Link href="/login" className="btn-signal btn-sm hidden min-w-28 lg:inline-flex"><UserIcon /><span>Login / Account</span></Link>}
 
             <Link
               href={accountHref}
@@ -160,71 +180,137 @@ export function Header() {
 
         <nav className="hidden border-t border-navy-100 lg:block">
           <div className="shell flex items-center gap-1">
-            {primaryNav.map((item) =>
-              item.children ? (
-                <div
-                  key={item.label}
-                  className="relative"
-                  onMouseEnter={() => setCategoriesOpen(true)}
-                  onMouseLeave={() => setCategoriesOpen(false)}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setCategoriesOpen((v) => !v)}
+            {primaryNav.map((item, index) => (
+              <Fragment key={item.label}>
+                {index === 0 ? (
+                  <div
+                    className="relative"
+                    onMouseEnter={() => setClearanceOpen(true)}
+                    onMouseLeave={() => setClearanceOpen(false)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setClearanceOpen((v) => !v)}
+                      className={cn(
+                        "flex items-center gap-1.5 border-b-2 px-3.5 py-3.5 text-[13px] font-semibold uppercase tracking-wide transition-colors",
+                        isActive(item.href) && !pathname.startsWith("/clearance/")
+                          ? "border-brand-600 text-brand-700"
+                          : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
+                      )}
+                      aria-haspopup="true"
+                      aria-expanded={clearanceOpen}
+                    >
+                      {item.label}
+                      <ChevronIcon />
+                    </button>
+                    {clearanceOpen ? (
+                      <div className="absolute left-0 top-full z-50 w-72 animate-fade-in rounded-b-md border border-navy-100 bg-white p-3 shadow-lift">
+                        <Link
+                          href="/clearance/retail"
+                          className="flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-navy-50"
+                        >
+                          <span className="icon-tile h-9 w-9 shrink-0">
+                            <RetailIcon />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold text-navy-900">Retail</span>
+                            <span className="mt-0.5 block text-xs text-steel-500">
+                              Individually priced, buy online
+                            </span>
+                          </span>
+                        </Link>
+                        <Link
+                          href="/clearance/wholesale"
+                          className="flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-navy-50"
+                        >
+                          <span className="icon-tile h-9 w-9 shrink-0">
+                            <WholesaleIcon />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold text-navy-900">Wholesale</span>
+                            <span className="mt-0.5 block text-xs text-steel-500">
+                              Bulk quantities, pricing on request
+                            </span>
+                          </span>
+                        </Link>
+                        <Link
+                          href="/clearance"
+                          className="mt-2 block border-t border-navy-100 px-3 pt-3 text-xs font-semibold uppercase tracking-wide text-brand-700 hover:text-brand-500"
+                        >
+                          View all clearance stock &rarr;
+                        </Link>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <Link
+                    href={item.href}
                     className={cn(
-                      "flex items-center gap-1.5 border-b-2 px-3.5 py-3.5 text-[13px] font-semibold uppercase tracking-wide transition-colors",
+                      "border-b-2 px-3.5 py-3.5 text-[13px] font-semibold uppercase tracking-wide transition-colors",
                       isActive(item.href)
                         ? "border-brand-600 text-brand-700"
                         : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
                     )}
-                    aria-haspopup="true"
-                    aria-expanded={categoriesOpen}
                   >
                     {item.label}
-                    <ChevronIcon />
-                  </button>
-                  {categoriesOpen ? (
-                    <div className="absolute left-0 top-full z-50 w-[560px] animate-fade-in rounded-b-md border border-navy-100 bg-white p-3 shadow-lift">
-                      <div className="grid grid-cols-2 gap-1">
-                        {item.children.map((category) => (
-                          <Link
-                            key={category.href}
-                            href={category.href}
-                            className="rounded-md px-3 py-2.5 transition-colors hover:bg-navy-50"
-                          >
-                            <span className="block text-sm font-semibold text-navy-900">
-                              {category.label}
-                            </span>
-                            <span className="mt-0.5 block text-xs text-steel-500">
-                              {category.description}
-                            </span>
-                          </Link>
-                        ))}
+                  </Link>
+                )}
+                {index === 0 && navCategories.length ? (
+                  <div
+                    className="relative"
+                    onMouseEnter={() => setCategoriesOpen(true)}
+                    onMouseLeave={() => setCategoriesOpen(false)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setCategoriesOpen((v) => !v)}
+                      className={cn(
+                        "flex items-center gap-1.5 border-b-2 px-3.5 py-3.5 text-[13px] font-semibold uppercase tracking-wide transition-colors",
+                        pathname.startsWith("/clearance/")
+                          ? "border-brand-600 text-brand-700"
+                          : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
+                      )}
+                      aria-haspopup="true"
+                      aria-expanded={categoriesOpen}
+                    >
+                      Categories
+                      <ChevronIcon />
+                    </button>
+                    {categoriesOpen ? (
+                      <div className="absolute left-0 top-full z-50 w-[560px] animate-fade-in rounded-b-md border border-navy-100 bg-white p-3 shadow-lift">
+                        <div className="grid grid-cols-2 gap-1">
+                          {navCategories.map((category) => (
+                            <Link
+                              key={category.slug}
+                              href={`/clearance/${category.slug}`}
+                              className="flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-navy-50"
+                            >
+                              <span className="icon-tile h-9 w-9 shrink-0">
+                                <CategoryIcon category={category.slug} className="h-5 w-5" />
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm font-semibold text-navy-900">
+                                  {category.label}
+                                </span>
+                                <span className="mt-0.5 block text-xs text-steel-500">
+                                  {category.count} clearance item{category.count === 1 ? "" : "s"}
+                                </span>
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                        <Link
+                          href="/clearance"
+                          className="mt-2 block border-t border-navy-100 px-3 pt-3 text-xs font-semibold uppercase tracking-wide text-brand-700 hover:text-brand-500"
+                        >
+                          View all clearance stock &rarr;
+                        </Link>
                       </div>
-                      <Link
-                        href="/clearance"
-                        className="mt-2 block border-t border-navy-100 px-3 pt-3 text-xs font-semibold uppercase tracking-wide text-brand-700 hover:text-brand-500"
-                      >
-                        View all clearance stock &rarr;
-                      </Link>
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={cn(
-                    "border-b-2 px-3.5 py-3.5 text-[13px] font-semibold uppercase tracking-wide transition-colors",
-                    isActive(item.href)
-                      ? "border-brand-600 text-brand-700"
-                      : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
-                  )}
-                >
-                  {item.label}
-                </Link>
-              ),
-            )}
+                    ) : null}
+                  </div>
+                ) : null}
+              </Fragment>
+            ))}
           </div>
         </nav>
       </header>
@@ -267,7 +353,20 @@ export function Header() {
                 </Link>
               </div>
               {authenticated ? (
-                <div className="mt-2 grid grid-cols-2 gap-2"><Link href="/account/orders" className="btn-outline btn-sm justify-start">Orders</Link><Link href="/account/enquiries" className="btn-outline btn-sm justify-start">Enquiries</Link><Link href="/account/saved-products" className="btn-outline btn-sm justify-start">Saved</Link><button type="button" onClick={() => void logout()} className="btn-outline btn-sm justify-start text-signal-700">Sign out</button></div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <Link href="/account/orders" className="btn-outline btn-sm justify-start">
+                    <ReceiptIcon /> Orders
+                  </Link>
+                  <Link href="/account/enquiries" className="btn-outline btn-sm justify-start">
+                    <InboxIcon /> Enquiries
+                  </Link>
+                  <Link href="/account/saved-products" className="btn-outline btn-sm justify-start">
+                    <HeartIcon /> Saved
+                  </Link>
+                  <button type="button" onClick={() => void logout()} className="btn-outline btn-sm justify-start text-signal-700">
+                    <LogoutIcon /> Sign out
+                  </button>
+                </div>
               ) : null}
               {WHATSAPP_NUMBER ? (
                 <button
@@ -281,27 +380,130 @@ export function Header() {
             </div>
 
             <nav className="border-t border-navy-100">
-              <Link
-                href="/clearance"
-                className="block border-b border-navy-50 px-4 py-3.5 text-sm font-semibold uppercase tracking-wide text-navy-900"
-              >
-                Clearance Stock
-              </Link>
-              {primaryNav
-                .filter((item) => !item.children && item.href !== "/clearance")
-                .map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className="block border-b border-navy-50 px-4 py-3.5 text-sm font-semibold uppercase tracking-wide text-navy-900"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+              {primaryNav.map((item, index) => {
+                const Icon = NAV_ICON[item.href];
+                const active = isActive(item.href);
+                return (
+                  <Fragment key={item.label}>
+                    {index === 0 ? (
+                      <div className="border-b border-navy-50">
+                        <button
+                          type="button"
+                          onClick={() => setClearanceExpanded((v) => !v)}
+                          className={cn(
+                            "flex w-full items-center gap-3 px-4 py-3.5 text-sm font-semibold uppercase tracking-wide transition-colors",
+                            active && !pathname.startsWith("/clearance/") ? "bg-brand-50 text-brand-700" : "text-navy-900 hover:bg-navy-50",
+                          )}
+                          aria-expanded={clearanceExpanded}
+                        >
+                          {Icon ? (
+                            <span
+                              className={cn(
+                                "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+                                active && !pathname.startsWith("/clearance/") ? "bg-brand-600 text-white" : "bg-navy-900 text-white",
+                              )}
+                              aria-hidden="true"
+                            >
+                              <Icon />
+                            </span>
+                          ) : null}
+                          <span className="flex-1 text-left">{item.label}</span>
+                          <span aria-hidden="true" className={cn("text-steel-400 transition-transform", clearanceExpanded && "rotate-90")}>
+                            <ChevronRightIcon />
+                          </span>
+                        </button>
+                        {clearanceExpanded ? (
+                          <div className="bg-navy-50/50 pb-2">
+                            <Link href="/clearance" className="block px-4 py-2.5 pl-16 text-sm font-semibold text-navy-800 hover:bg-navy-100">
+                              All Clearance Stock
+                            </Link>
+                            <Link href="/clearance/retail" className="block px-4 py-2.5 pl-16 text-sm font-semibold text-navy-800 hover:bg-navy-100">
+                              Retail
+                            </Link>
+                            <Link href="/clearance/wholesale" className="block px-4 py-2.5 pl-16 text-sm font-semibold text-navy-800 hover:bg-navy-100">
+                              Wholesale
+                            </Link>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          "flex items-center gap-3 border-b border-navy-50 px-4 py-3.5 text-sm font-semibold uppercase tracking-wide transition-colors",
+                          active ? "bg-brand-50 text-brand-700" : "text-navy-900 hover:bg-navy-50",
+                        )}
+                      >
+                        {Icon ? (
+                          <span
+                            className={cn(
+                              "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+                              active ? "bg-brand-600 text-white" : "bg-navy-900 text-white",
+                            )}
+                            aria-hidden="true"
+                          >
+                            <Icon />
+                          </span>
+                        ) : null}
+                        <span className="flex-1">{item.label}</span>
+                        <span aria-hidden="true" className="text-steel-300">
+                          <ChevronRightIcon />
+                        </span>
+                      </Link>
+                    )}
+                    {index === 0 && navCategories.length ? (
+                      <div className="border-b border-navy-50">
+                        <button
+                          type="button"
+                          onClick={() => setCategoriesExpanded((v) => !v)}
+                          className={cn(
+                            "flex w-full items-center gap-3 px-4 py-3.5 text-sm font-semibold uppercase tracking-wide transition-colors",
+                            pathname.startsWith("/clearance/")
+                              ? "bg-brand-50 text-brand-700"
+                              : "text-navy-900 hover:bg-navy-50",
+                          )}
+                          aria-expanded={categoriesExpanded}
+                        >
+                          <span
+                            className={cn(
+                              "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+                              pathname.startsWith("/clearance/") ? "bg-brand-600 text-white" : "bg-navy-900 text-white",
+                            )}
+                            aria-hidden="true"
+                          >
+                            <LayersIcon />
+                          </span>
+                          <span className="flex-1 text-left">Categories</span>
+                          <span aria-hidden="true" className={cn("text-steel-400 transition-transform", categoriesExpanded && "rotate-90")}>
+                            <ChevronRightIcon />
+                          </span>
+                        </button>
+                        {categoriesExpanded ? (
+                          <div className="bg-navy-50/50 pb-2">
+                            {navCategories.map((category) => (
+                              <Link
+                                key={category.slug}
+                                href={`/clearance/${category.slug}`}
+                                className="flex items-center gap-3 px-4 py-2.5 pl-8 text-sm font-semibold text-navy-800 hover:bg-navy-100"
+                              >
+                                <span className="text-steel-500">
+                                  <CategoryIcon category={category.slug} className="h-4 w-4" />
+                                </span>
+                                <span className="flex-1 truncate">{category.label}</span>
+                                <span className="text-xs font-normal normal-case text-steel-500">{category.count}</span>
+                              </Link>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
             </nav>
 
             <div className="px-4 py-4">
-              <Link href="/about" className="text-xs leading-relaxed text-steel-600">
+              <Link href="/about" className="text-xs leading-relaxed text-steel-600 hover:text-brand-700">
                 About Engineerparts.com
               </Link>
             </div>
@@ -312,8 +514,13 @@ export function Header() {
   );
 }
 
-function AccountMenuLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return <Link href={href} className="block rounded-md px-3 py-2 text-sm font-semibold text-navy-800 hover:bg-navy-50">{children}</Link>;
+function AccountMenuLink({ href, icon, children }: { href: string; icon?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-semibold text-navy-800 hover:bg-navy-50">
+      {icon ? <span className="text-steel-400">{icon}</span> : null}
+      {children}
+    </Link>
+  );
 }
 
 function HeaderAction({
@@ -358,6 +565,14 @@ function ChevronIcon() {
   return (
     <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
       <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+      <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -409,6 +624,109 @@ function WhatsAppIcon() {
   return (
     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M12.04 2C6.6 2 2.2 6.4 2.2 11.84c0 1.74.46 3.44 1.32 4.94L2 22l5.36-1.4a9.9 9.9 0 0 0 4.68 1.2h.01c5.43 0 9.84-4.4 9.84-9.84C21.89 6.4 17.47 2 12.04 2Zm5.75 13.9c-.24.68-1.42 1.3-1.96 1.34-.5.05-1.12.08-1.8-.1-.42-.13-.96-.31-1.66-.61-2.92-1.26-4.83-4.2-4.98-4.4-.14-.2-1.19-1.58-1.19-3.02 0-1.43.75-2.13 1.02-2.43.27-.29.58-.36.78-.36l.56.01c.18.01.42-.07.66.5.24.58.82 2 .89 2.14.07.14.12.31.02.5-.09.2-.14.32-.28.5-.14.17-.3.38-.43.51-.14.14-.29.29-.13.57.17.29.74 1.22 1.58 1.97 1.09.97 2 1.28 2.29 1.42.28.14.45.12.62-.07.17-.2.72-.84.91-1.12.19-.29.38-.24.64-.14.26.09 1.66.78 1.94.92.29.14.48.21.55.33.07.12.07.7-.17 1.38Z" />
+    </svg>
+  );
+}
+
+function TagIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path d="M11.5 3.5h6a1 1 0 0 1 1 1v6a1 1 0 0 1-.3.7l-9 9a1 1 0 0 1-1.4 0l-6-6a1 1 0 0 1 0-1.4l9-9a1 1 0 0 1 .7-.3Z" strokeLinejoin="round" />
+      <circle cx="15.5" cy="7.5" r="1.4" />
+    </svg>
+  );
+}
+
+function LayersIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1" />
+    </svg>
+  );
+}
+
+function RetailIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path d="M3 5h2l2.2 10.3a2 2 0 0 0 2 1.7h7.6a2 2 0 0 0 2-1.6L20 8H6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="9.5" cy="20" r="1.3" />
+      <circle cx="17.5" cy="20" r="1.3" />
+    </svg>
+  );
+}
+
+function WholesaleIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <rect x="3.5" y="10.5" width="7" height="7" rx="0.6" />
+      <rect x="13.5" y="10.5" width="7" height="7" rx="0.6" />
+      <path d="M7 10.5V7.5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BuildingIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path d="M4.5 20.5v-15a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v15M4.5 20.5h15M4.5 20.5v-9l5-3M15.5 20.5v-6h4v6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 8h1.5M8 11.5h1.5M8 15h1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SparkleIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path d="M12 3.5v4M12 16.5v4M3.5 12h4M16.5 12h4" strokeLinecap="round" />
+      <path d="m7 7 2 2M17 17l-2-2M17 7l-2 2M7 17l2-2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 11v5.5" strokeLinecap="round" />
+      <circle cx="12" cy="8" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m4 7 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ReceiptIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <path d="M6 3.5h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3v-17Z" strokeLinejoin="round" />
+      <path d="M8.5 8h7M8.5 11.5h7M8.5 15h4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <path d="M12 20s-7.5-4.6-9.8-9A5.3 5.3 0 0 1 12 6.3 5.3 5.3 0 0 1 21.8 11c-2.3 4.4-9.8 9-9.8 9Z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <path d="M9 20H5.5a1.5 1.5 0 0 1-1.5-1.5v-13A1.5 1.5 0 0 1 5.5 4H9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 16.5 20.5 12 16 7.5M20.5 12H9" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

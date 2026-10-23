@@ -6,6 +6,13 @@ const wooCommerceImagePattern = wooCommerceUrl
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // xlsx reads files via Node's `fs` at runtime (data/brand-logos.xlsx). Left
+  // bundled, webpack hands it a browser-style `fs` shim instead of the real
+  // module, which breaks that read. Keeping it external forces a plain
+  // `require("xlsx")` in the server bundle so it gets real Node `fs`.
+  experimental: {
+    serverComponentsExternalPackages: ["xlsx"],
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

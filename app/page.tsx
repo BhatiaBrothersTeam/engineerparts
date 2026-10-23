@@ -7,9 +7,11 @@ import { IconTile } from "@/components/ui/IconTile";
 import { BrandCard } from "@/components/cards/BrandCard";
 import { ClearanceStockTabs } from "@/components/home/ClearanceStockTabs";
 import { ClearanceAlerts } from "@/components/home/ClearanceAlerts";
+import { BulkDealSection } from "@/components/home/BulkDealSection";
 import { brandsFromProducts } from "@/lib/data/brands";
 import { img, photo } from "@/lib/images";
 import { formatNumber } from "@/lib/utils";
+import { isWholesaleProduct } from "@/lib/wholesale";
 import type { Product } from "@/lib/types";
 import { getProducts } from "@/lib/woocommerce";
 
@@ -65,7 +67,7 @@ export default async function HomePage() {
     latest: [...available].sort((a, b) => new Date(b.added_date).getTime() - new Date(a.added_date).getTime()).slice(0, 8),
     lowest: [...available].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity)).slice(0, 8),
     bulk: available
-      .filter((product) => product.listing_type === "Whole Lot" || product.category === "lots-bulk-clearance" || (product.quantity_available ?? 0) >= 200)
+      .filter(isWholesaleProduct)
       .sort((a, b) => (b.quantity_available ?? -1) - (a.quantity_available ?? -1))
       .slice(0, 8),
     equipment: available
@@ -195,6 +197,12 @@ export default async function HomePage() {
           </div>
         </div>
       </section> : null}
+
+      <section className="section border-y border-navy-800 bg-navy-950">
+        <div className="shell">
+          <BulkDealSection />
+        </div>
+      </section>
 
       <section className="section">
         <div className="shell">
