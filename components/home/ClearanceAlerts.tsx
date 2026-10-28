@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { customerErrorMessage, customerRequest } from "@/lib/customer-feedback";
 
 export function ClearanceAlerts() {
   const errorId = useId();
@@ -17,17 +18,15 @@ export function ClearanceAlerts() {
     }
     setState("sending");
     try {
-      const response = await fetch("/api/clearance-alerts", {
+      await customerRequest("/api/clearance-alerts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
-      });
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(result.error || "Unable to save your email.");
+      }, "Your subscription could not be confirmed. Try again shortly, or contact support if it keeps failing.");
       setState("done");
     } catch (cause) {
       setState("idle");
-      setError(cause instanceof Error ? cause.message : "Something went wrong. Please try again.");
+      setError(customerErrorMessage(cause, "Your subscription could not be confirmed. Try again shortly or contact support."));
     }
   }
 
@@ -45,8 +44,11 @@ export function ClearanceAlerts() {
             Your email ({email}) has been saved for future clearance alerts.
           </div>
         ) : (
+          <>
+          <label htmlFor={`${errorId}-email`} className="mb-2 block text-xs text-steel-300">Email address <span className="text-brand-300">*</span> (required)</label>
           <form onSubmit={onSubmit} className="flex rounded-full border border-white/20 bg-white p-1 text-navy-900 shadow-sm transition-colors hover:border-white/50 focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-400/40">
             <input
+              id={`${errorId}-email`}
               type="email"
               name="email"
               autoComplete="email"
@@ -75,6 +77,7 @@ export function ClearanceAlerts() {
               )}
             </button>
           </form>
+          </>
         )}
         {error ? <p id={errorId} role="alert" className="mt-2 text-xs text-brand-300">{error}</p> : null}
       </div>

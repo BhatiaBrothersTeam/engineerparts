@@ -2,7 +2,7 @@
 /**
  * Plugin Name: EngineerParts Customer Accounts
  * Description: Secure customer authentication endpoints for the EngineerParts storefront.
- * Version: 1.9.0
+ * Version: 1.9.3
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
  */
@@ -43,12 +43,22 @@ final class EngineerParts_Customer_Accounts {
         add_action('admin_post_nopriv_engineerparts_payment_handoff', array(self::class, 'payment_handoff'));
         add_action('rest_api_init', array(self::class, 'register_routes'));
         add_filter('woocommerce_email_styles', array(self::class, 'woocommerce_email_styles'), 10, 2);
+        add_filter('woocommerce_mail_callback_params', array(self::class, 'customer_email_params'), 100, 2);
+        add_filter('woocommerce_email_from_name', static fn($name): string => 'EngineerParts');
+        add_filter('wp_mail_from_name', static fn($name): string => 'EngineerParts', 100);
+        add_filter('retrieve_password_notification_email', array(self::class, 'customer_reset_email'), 100, 4);
+        add_filter('wp_new_user_notification_email', array(self::class, 'customer_core_email'), 100, 3);
+        add_filter('password_change_email', array(self::class, 'customer_core_email'), 100, 3);
+        add_filter('email_change_email', array(self::class, 'customer_core_email'), 100, 3);
+        add_action('template_redirect', array(self::class, 'redirect_customer_pages'), 20);
         add_action('woocommerce_new_order', array(self::class, 'tag_storefront_checkout_order'), 10, 2);
         add_action('woocommerce_store_api_checkout_order_processed', array(self::class, 'tag_storefront_checkout_order'));
         add_filter('woocommerce_payment_complete_order_status', array(self::class, 'hold_late_storefront_payment'), 10, 3);
         add_filter('woocommerce_payment_complete_reduce_order_stock', array(self::class, 'prevent_late_storefront_stock_reduction'), 10, 2);
         add_action('engineerparts_purge_sessions', array(self::class, 'purge_sessions'));
         add_filter('woocommerce_get_checkout_order_received_url', array(self::class, 'order_received_url'), 10, 2);
+        add_filter('woocommerce_package_rates', array(self::class, 'apply_free_delivery'), 100, 2);
+        add_filter('woocommerce_cart_shipping_packages', array(self::class, 'delivery_policy_packages'));
     }
 
     public static function maybe_migrate_legacy_contacts(): void {
@@ -847,6 +857,30 @@ final class EngineerParts_Customer_Accounts {
         return strlen($configured) >= 32 && hash_equals($configured, $provided);
     }
 
+    public static function delivery_policy_packages(array $packages): array {
+        foreach ($packages as &$package) {
+            $package['engineerparts_delivery_policy'] = 'aed-200-v1:' . get_woocommerce_currency() . ':' . (WC()->cart ? WC()->cart->get_cart_contents_total() : '');
+        }
+        unset($package);
+        return $packages;
+    }
+
+    public static function apply_free_delivery(array $rates, array $package): array {
+        if (get_woocommerce_currency() !== 'AED' || !WC()->cart || (float) WC()->cart->get_cart_contents_total() < 200) {
+            return $rates;
+        }
+        foreach ($rates as $rate) {
+            if ($rate->get_method_id() === 'local_pickup') {
+                continue;
+            }
+            $rate->set_cost(0);
+            $taxes = $rate->get_taxes();
+            $rate->set_taxes(array_fill_keys(array_keys($taxes), 0));
+            $rate->set_label('Free delivery');
+        }
+        return $rates;
+    }
+
     public static function proxy_storefront_checkout(WP_REST_Request $request): WP_REST_Response {
         global $wpdb;
 
@@ -870,10 +904,13 @@ final class EngineerParts_Customer_Accounts {
             $nonce === '' ||
             strlen($nonce) > 256 ||
             !is_array($checkout) ||
-            ($checkout['payment_method'] ?? '') !== 'nomod' ||
+            !in_array($checkout['payment_method'] ?? '', array('nomod', 'cod'), true) ||
             !is_email($billing_email)
         ) {
             return self::error('Invalid checkout request.', 400, 'invalid_checkout_request');
+        }
+        if ($checkout['payment_method'] === 'cod' && ($checkout['shipping_address']['country'] ?? '') !== 'AE') {
+            return self::error('Cash on Delivery is available for UAE delivery addresses only.', 422, 'cod_country_not_supported');
         }
 
         $lock_name = 'ep-checkout-' . substr(hash('sha256', $reference), 0, 48);
@@ -908,6 +945,7 @@ final class EngineerParts_Customer_Accounts {
                 return self::success(array(
                     'checkout' => array(
                         'order_id' => $order->get_id(),
+                        'order_key' => $order->get_order_key(),
                         'status' => $order->get_status(),
                         'payment_result' => array(
                             'payment_status' => $order->is_paid() ? 'success' : 'pending',
@@ -917,6 +955,12 @@ final class EngineerParts_Customer_Accounts {
                 ));
             }
 
+            if ($checkout['payment_method'] === 'cod') {
+                $gateways = WC()->payment_gateways()->payment_gateways();
+                if (!isset($gateways['cod']) || $gateways['cod']->enabled !== 'yes') {
+                    return self::error('Cash on Delivery is unavailable. Choose online payment or contact sales.', 422, 'cod_unavailable');
+                }
+            }
             $store_request = new WP_REST_Request('POST', '/wc/store/v1/checkout');
             $store_request->set_header('Cart-Token', $cart_token);
             $store_request->set_header('Nonce', $nonce);
@@ -980,6 +1024,7 @@ final class EngineerParts_Customer_Accounts {
 
             $order->update_meta_data(self::STOREFRONT_REFERENCE_META, $reference);
             $order->update_meta_data(self::STOREFRONT_REQUEST_HASH_META, $request_hash);
+            $response_data['order_key'] = $order->get_order_key();
             $raw_payment_url = is_string($checkout_result['redirect_url'] ?? null)
                 ? $checkout_result['redirect_url']
                 : '';
@@ -1215,7 +1260,7 @@ final class EngineerParts_Customer_Accounts {
                 if (!is_wp_error($key)) {
                     $url = add_query_arg(array(
                         'key' => $key,
-                        'login' => $user->user_login,
+                        'login' => rawurlencode($user->user_login),
                     ), self::frontend_url() . '/reset-password');
                     self::send_branded_email(
                         $email,
@@ -1435,6 +1480,9 @@ final class EngineerParts_Customer_Accounts {
      * owns this order before opening WooCommerce's order-payment page.
      */
     private static function payment_handoff_url(WC_Order $order): ?string {
+        if ($order->get_payment_method() === 'nomod') {
+            return add_query_arg(array('order_id' => $order->get_id(), 'order_key' => rawurlencode($order->get_order_key())), self::frontend_url() . '/checkout/pay');
+        }
         $user_id = (int) $order->get_customer_id();
         if (!$user_id) return $order->get_checkout_payment_url();
 
@@ -2077,7 +2125,9 @@ final class EngineerParts_Customer_Accounts {
             'id' => $order->get_id(), 'number' => $order->get_order_number(),
             'date' => $order->get_date_created() ? $order->get_date_created()->date(DATE_ATOM) : '',
             'status' => $order->get_status(), 'total' => (float) $order->get_total(), 'currency' => $order->get_currency(),
-            'paymentStatus' => $order->is_paid() ? 'paid' : ($order->needs_payment() ? 'unpaid' : 'not-required'),
+            'paymentStatus' => $order->get_payment_method() === 'cod' && $order->has_status(array('processing', 'on-hold'))
+                ? 'pay-on-delivery'
+                : ($order->is_paid() ? 'paid' : ($order->needs_payment() ? 'unpaid' : 'not-required')),
             'itemCount' => $order->get_item_count(), 'canPay' => $order->needs_payment(), 'canReorder' => $order->has_status('completed'),
         );
     }
@@ -2147,6 +2197,147 @@ final class EngineerParts_Customer_Accounts {
         ';
     }
 
+    private static function customer_url(string $url, $order = null): string {
+        $parts = wp_parse_url(html_entity_decode($url, ENT_QUOTES, 'UTF-8'));
+        $hosts = array_map('strtolower', array_unique(array_filter(array(
+            wp_parse_url(home_url(), PHP_URL_HOST),
+            wp_parse_url(site_url(), PHP_URL_HOST),
+            'shop.engineerparts.com',
+        ))));
+        if (!is_array($parts) || !in_array(strtolower($parts['host'] ?? ''), $hosts, true)) return $url;
+        $path = $parts['path'] ?? '/';
+        parse_str($parts['query'] ?? '', $query);
+        $base = self::frontend_url();
+        if (!empty($query['key']) && (!empty($query['login']) || !empty($query['id']))) {
+            $user = !empty($query['id']) ? get_userdata((int) $query['id']) : null;
+            $login = $user ? $user->user_login : ($query['login'] ?? '');
+            if ($login !== '') return add_query_arg(array('key' => rawurlencode($query['key']), 'login' => rawurlencode($login)), $base . '/reset-password');
+        }
+        if (str_contains($path, 'lost-password') || ($query['action'] ?? '') === 'lostpassword') return $base . '/forgot-password';
+        if ($order instanceof WC_Order && (str_contains($path, 'order-pay') || ($query['action'] ?? '') === 'engineerparts_payment_handoff')) {
+            return add_query_arg(array('order_id' => $order->get_id(), 'order_key' => rawurlencode($order->get_order_key())), $base . '/checkout/pay');
+        }
+        if ($order instanceof WC_Order && (str_contains($path, 'checkout') || str_contains($path, 'view-order'))) return self::order_received_url('', $order);
+        if ($order instanceof WC_Order && isset($query['download_file'])) return $base . '/account/orders/' . $order->get_id();
+        if (preg_match('~/(?:view-order|order-pay|order-received)/(\d+)~', $path, $match)) return $base . '/account/orders/' . $match[1];
+        if (str_contains($path, 'my-account') || str_contains($path, 'wp-login')) return $base . '/account';
+        if (preg_match('~/product/([^/]+)~', $path, $match)) return $base . '/product/' . $match[1];
+        if (str_contains($path, 'checkout')) return $base . '/checkout';
+        if (str_contains($path, 'cart')) return $base . '/cart';
+        if (str_contains($path, 'shop') || str_contains($path, 'product-category')) return $base . '/clearance';
+        return $base;
+    }
+
+    private static function customer_email_content(string $content, $order = null): string {
+        $content = preg_replace_callback(
+            '~(?:https?:)?//[^\s<>"\')]+~i',
+            static fn(array $match): string => self::customer_url($match[0], $order),
+            $content
+        );
+        $content = str_ireplace('shop.engineerparts.com', (string) wp_parse_url(self::frontend_url(), PHP_URL_HOST), $content);
+        return str_ireplace(array('WordPress', 'WooCommerce'), 'EngineerParts', $content);
+    }
+
+    public static function customer_email_params(array $params, $email): array {
+        if (!$email->is_customer_email()) return $params;
+        $order = $email->object instanceof WC_Order ? $email->object : null;
+        $message = (string) $params[2];
+        if ($email->get_email_type() !== 'plain') {
+            if (class_exists('DOMDocument') && method_exists('DOMDocument', 'loadHTML')) {
+                $document = new DOMDocument();
+                $previous = libxml_use_internal_errors(true);
+                try {
+                    $document->loadHTML('<?xml encoding="UTF-8">' . $message);
+                    foreach (iterator_to_array($document->getElementsByTagName('img')) as $image) {
+                        $src = $image->getAttribute('src');
+                        if (self::customer_url($src) !== $src) $image->parentNode->removeChild($image);
+                    }
+                    $body = (new DOMXPath($document))->query('//*[@id="body_content_inner"]')->item(0);
+                    if ($body) {
+                        $message = '';
+                        foreach ($body->childNodes as $child) $message .= $document->saveHTML($child);
+                    } else {
+                        error_log('EngineerParts: customer email body container missing; preserving original email content.');
+                        $message = preg_replace('~</?(?:html|head|body)[^>]*>|<!doctype[^>]*>~i', '', $message);
+                    }
+                } finally {
+                    libxml_clear_errors();
+                    libxml_use_internal_errors($previous);
+                }
+            } else {
+                error_log('EngineerParts: enable PHP DOM/XML for formatted customer emails; sending branded text content.');
+                $message = preg_replace('~<a\b[^>]*href=(["\'])(.*?)\1[^>]*>(.*?)</a>~is', '$3 ($2)', $message);
+                $message = self::customer_email_content($message, $order);
+                $message = nl2br(esc_html(strip_tags(preg_replace('~</(?:p|div|tr|td|h[1-6])>~i', "\n", $message))));
+            }
+            $message = self::email_template($email->get_heading(), '', $message);
+        }
+        $params[1] = self::customer_email_content((string) $params[1], $order);
+        $params[2] = self::customer_email_content($message, $order);
+        global $phpmailer;
+        if (is_object($phpmailer) && isset($phpmailer->AltBody)) {
+            $phpmailer->AltBody = self::customer_email_content((string) $phpmailer->AltBody, $order);
+        }
+        return $params;
+    }
+
+    private static function is_customer_user($user): bool {
+        return $user && in_array('customer', (array) $user->roles, true) &&
+            !array_intersect(array('administrator', 'shop_manager'), (array) $user->roles);
+    }
+
+    public static function customer_reset_email(array $email, string $key, string $login, $user): array {
+        if (!self::is_customer_user($user)) return $email;
+        $url = add_query_arg(array('key' => rawurlencode($key), 'login' => rawurlencode($login)), self::frontend_url() . '/reset-password');
+        $email['subject'] = 'Reset your EngineerParts password';
+        $email['message'] = self::email_template('Reset your password', 'We received a request to reset your EngineerParts password.', '<p>If you did not request this change, you can ignore this email.</p>', 'Reset password', $url);
+        $email['headers'] = array('Content-Type: text/html; charset=UTF-8');
+        return $email;
+    }
+
+    public static function customer_core_email(array $email, $user, $unused = null): array {
+        $user = is_array($user) ? get_userdata((int) ($user['ID'] ?? 0)) : $user;
+        if (!self::is_customer_user($user)) return $email;
+        $email['subject'] = self::customer_email_content((string) $email['subject']);
+        $message = str_replace(array('###SITENAME###', '###SITEURL###'), array('EngineerParts', self::frontend_url()), (string) $email['message']);
+        $email['message'] = self::email_template('Your EngineerParts account', '', nl2br(esc_html(self::customer_email_content($message))));
+        $email['headers'] = array('Content-Type: text/html; charset=UTF-8');
+        return $email;
+    }
+
+    public static function customer_page_destination(): ?string {
+        if (is_admin() || wp_doing_ajax() || wp_doing_cron() || (defined('REST_REQUEST') && REST_REQUEST) ||
+            !in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', array('GET', 'HEAD'), true) ||
+            isset($_GET['wc-api']) || isset($_GET['wc-ajax']) || isset($_GET['add-to-cart']) ||
+            is_wc_endpoint_url('order-pay')) return null;
+        if (is_wc_endpoint_url('order-received')) {
+            $order = wc_get_order((int) get_query_var('order-received'));
+            if ($order && hash_equals($order->get_order_key(), (string) ($_GET['key'] ?? ''))) return self::order_received_url('', $order);
+            return self::frontend_url() . '/account/orders';
+        }
+        if (is_account_page()) {
+            if (is_wc_endpoint_url('lost-password')) {
+                return self::customer_url(add_query_arg(array_map('sanitize_text_field', wp_unslash($_GET)), home_url('/my-account/lost-password/')));
+            }
+            return self::frontend_url() . '/account';
+        }
+        if (is_cart()) return self::frontend_url() . '/cart';
+        if (is_checkout()) return self::frontend_url() . '/checkout';
+        if (is_shop() || is_product_taxonomy()) return self::frontend_url() . '/clearance';
+        if (is_product()) return self::frontend_url() . '/product/' . get_post_field('post_name', get_queried_object_id());
+        if (is_front_page() || is_home()) return self::frontend_url();
+        return null;
+    }
+
+    public static function redirect_customer_pages(): void {
+        if (!function_exists('is_shop')) return;
+        $url = self::customer_page_destination();
+        if ($url) {
+            wp_redirect($url, 302, 'EngineerParts');
+            exit;
+        }
+    }
+
     private static function send_branded_email(
         string $to,
         string $subject,
@@ -2161,7 +2352,7 @@ final class EngineerParts_Customer_Accounts {
         return wp_mail(
             $to,
             $subject,
-            self::email_template($title, $intro, $body_html, $button_label, $button_url),
+            self::customer_email_content(self::email_template($title, $intro, $body_html, $button_label, $button_url)),
             $headers
         );
     }
@@ -2230,7 +2421,7 @@ final class EngineerParts_Customer_Accounts {
         $token = bin2hex(random_bytes(32));
         update_user_meta($user_id, self::VERIFY_HASH_META, hash('sha256', $token));
         update_user_meta($user_id, self::VERIFY_EXPIRES_META, (string) (time() + DAY_IN_SECONDS));
-        $url = add_query_arg(array('token' => $token, 'email' => $email), self::frontend_url() . '/verify-email');
+        $url = add_query_arg(array('token' => $token, 'email' => rawurlencode($email)), self::frontend_url() . '/verify-email');
         self::send_branded_email(
             $email,
             'Verify your EngineerParts account',

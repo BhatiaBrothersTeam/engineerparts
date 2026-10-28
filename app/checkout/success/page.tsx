@@ -75,6 +75,7 @@ function mapOrder(order: NonNullable<Awaited<ReturnType<typeof getWooCommerceOrd
     total: order.total,
     currency: order.currency,
     paymentUrl: order.payment_url,
+    paymentMethod: order.payment_method,
     items: order.line_items.map((item) => ({ name: item.name, quantity: item.quantity, total: item.total })),
   };
 }

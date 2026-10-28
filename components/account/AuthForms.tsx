@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { isValidElement, useEffect, useRef, useState, type ReactNode } from "react";
 import Script from "next/script";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { CUSTOMER_TYPES, safeRedirect, validPassword, type AuthResponse } from "@/lib/account";
 import type { WooCountry } from "@/lib/woocommerce";
 import { Logo } from "@/components/Logo";
 import { IconTile } from "@/components/ui/IconTile";
+import { customerErrorMessage, customerRequest, validateCustomerFields } from "@/lib/customer-feedback";
 
 declare global {
   interface Window {
@@ -26,15 +27,12 @@ declare global {
 }
 
 async function authRequest(action: string, body: Record<string, unknown>): Promise<AuthResponse> {
-  const response = await fetch(`/api/auth/${action}`, {
+  return customerRequest<AuthResponse>(`/api/auth/${action}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, ...(typeof body.email === "string" ? { email: body.email.trim() } : {}) }),
     cache: "no-store",
-  });
-  const data = (await response.json()) as AuthResponse;
-  if (!response.ok) throw new Error(data.error || "Unable to complete this request.");
-  return data;
+  }, "The account service is temporarily unavailable. Try again shortly, or contact support if the problem continues.");
 }
 
 export function LoginForm({ redirectTo, verified, reset }: { redirectTo?: string; verified?: boolean; reset?: boolean }) {
@@ -50,14 +48,21 @@ export function LoginForm({ redirectTo, verified, reset }: { redirectTo?: string
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
+    const validation = validateCustomerFields([["Email address", email, "email", 254], ["Password", password, undefined, 256]]);
+    if (validation) return setError(validation);
     setSubmitting(true);
     try {
       await authRequest("login", { email, password, remember });
-      await refreshUser();
+      const customer = await refreshUser();
+      if (!customer) {
+        setError("Sign-in succeeded, but your account could not be loaded. Refresh the page to retry, or contact support.");
+        setSubmitting(false);
+        return;
+      }
       router.replace(safeRedirect(redirectTo));
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Incorrect email or password.");
+      setError(customerErrorMessage(caught, "Unable to sign in. Try again shortly, or use Forgot password if you cannot remember your password."));
       setSubmitting(false);
     }
   }
@@ -67,6 +72,7 @@ export function LoginForm({ redirectTo, verified, reset }: { redirectTo?: string
       {verified ? <Status>Thanks, your email is verified. You can sign in now.</Status> : null}
       {reset ? <Status>Your password has been updated. Sign in with your new password.</Status> : null}
       <form onSubmit={submit} className="mt-7 space-y-5">
+        <p className="text-xs text-steel-600">Fields marked * are required.</p>
         <Field label="Email address" htmlFor="login-email">
           <input id="login-email" type="email" autoComplete="email" className="field" value={email} onChange={(event) => setEmail(event.target.value)} required />
         </Field>
@@ -81,6 +87,7 @@ export function LoginForm({ redirectTo, verified, reset }: { redirectTo?: string
           <Link href="/forgot-password" className="link-underline text-sm font-semibold text-brand-700">Forgot password?</Link>
         </div>
         <FormError message={error} />
+        {error && email.trim() ? <Link href={`/verify-email?sent=1&email=${encodeURIComponent(email.trim())}`} className="block text-sm font-semibold text-brand-700 underline">Need to verify your email? Request a new verification link</Link> : null}
         <button type="submit" className="btn-primary w-full" disabled={submitting}>{submitting ? "Signing in..." : "Sign in"}</button>
       </form>
       <AuthFooter>New to EngineerParts? <Link href="/register" className="font-semibold text-brand-700 link-underline">Create account</Link></AuthFooter>
@@ -153,6 +160,13 @@ export function RegisterForm({ countries }: { countries: WooCountry[] }) {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
+    const validation = validateCustomerFields([
+      ["First name", form.firstName, undefined, 60], ["Last name", form.lastName, undefined, 60],
+      ["Email address", form.email, "email", 254], ["Phone number", form.phone, "phone", 40],
+      ["Company name", form.company, undefined, 120],
+      ["Password", form.password, undefined, 256],
+    ]);
+    if (validation) return setError(validation);
     if (!passwordReady) return setError("Password must be at least 8 characters and contain letters and numbers.");
     if (form.password !== form.confirmPassword) return setError("Passwords do not match.");
     if (!captchaToken) return setError("Complete the CAPTCHA verification before creating your account.");
@@ -162,7 +176,7 @@ export function RegisterForm({ countries }: { countries: WooCountry[] }) {
       await authRequest("register", { ...payload, captchaToken });
       router.push(`/verify-email?sent=1&email=${encodeURIComponent(form.email)}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to create your account. Please try again.");
+      setError(customerErrorMessage(caught, "Unable to create your account. Try again shortly or contact support."));
       setCaptchaToken("");
       if (captchaWidget.current && window.turnstile) window.turnstile.reset(captchaWidget.current);
       setSubmitting(false);
@@ -173,6 +187,7 @@ export function RegisterForm({ countries }: { countries: WooCountry[] }) {
     <AuthCard eyebrow="Trade customer" title="Create an account" description="Create an Engineerparts account for faster purchasing and account services." wide>
       {captchaSiteKey ? <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onReady={renderCaptcha} onError={() => setError("CAPTCHA verification could not be loaded. Please refresh and try again.")} /> : null}
       <form onSubmit={submit} className="mt-7">
+        <p className="mb-4 text-xs text-steel-600">Fields marked * are required.</p>
         <SectionLabel>Your details</SectionLabel>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <Field label="First name" htmlFor="first-name"><input id="first-name" className="field" autoComplete="given-name" value={form.firstName} onChange={(event) => update("firstName", event.target.value)} required /></Field>
@@ -211,6 +226,7 @@ export function RegisterForm({ countries }: { countries: WooCountry[] }) {
         </details>
 
         <div className="mt-6" aria-label="CAPTCHA verification">
+          <p className="field-label">CAPTCHA verification *</p>
           {captchaSiteKey
             ? <div ref={captchaContainer} />
             : <p role="alert" className="flex items-start gap-2 rounded-md border border-signal-200 bg-signal-50 px-4 py-3 text-sm font-semibold text-signal-700"><AlertIcon />Account registration verification is unavailable. Please try again later.</p>}
@@ -230,12 +246,15 @@ export function ForgotPasswordForm() {
   const [error, setError] = useState("");
 
   async function submit(event: React.FormEvent) {
-    event.preventDefault(); setError(""); setSubmitting(true);
+    event.preventDefault(); setError("");
+    const validation = validateCustomerFields([["Email address", email, "email", 254]]);
+    if (validation) return setError(validation);
+    setSubmitting(true);
     try {
       const data = await authRequest("forgot-password", { email });
       setMessage(data.message ?? "If an account exists, password reset instructions have been sent.");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to send reset instructions.");
+      setError(customerErrorMessage(caught, "Unable to request a reset email. Try again shortly or contact support."));
     } finally { setSubmitting(false); }
   }
 
@@ -245,6 +264,7 @@ export function ForgotPasswordForm() {
         <Confirmation icon={<MailIcon />}>{message}</Confirmation>
       ) : (
         <form onSubmit={submit} className="mt-7 space-y-5">
+          <p className="text-xs text-steel-600">Fields marked * are required.</p>
           <Field label="Email address" htmlFor="forgot-email">
             <input id="forgot-email" type="email" autoComplete="email" className="field" value={email} onChange={(event) => setEmail(event.target.value)} required />
           </Field>
@@ -267,17 +287,19 @@ export function ResetPasswordForm({ resetKey, login }: { resetKey?: string; logi
 
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setError("");
-    if (!resetKey || !login) return setError("This password reset link is invalid or incomplete.");
+    if (!resetKey || !login) return setError("This password reset link is incomplete. Go to Forgot password and request a new link.");
+    if (password.length > 256) return setError("Password must be 256 characters or fewer.");
     if (!validPassword(password)) return setError("Password must be at least 8 characters and contain letters and numbers.");
     if (password !== confirm) return setError("Passwords do not match.");
     setSubmitting(true);
     try { await authRequest("reset-password", { key: resetKey, login, password }); router.replace("/login?reset=1"); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to reset your password."); setSubmitting(false); }
+    catch (caught) { setError(customerErrorMessage(caught, "Unable to reset your password. Request a new link from Forgot password, or contact support.")); setSubmitting(false); }
   }
 
   return (
     <AuthCard eyebrow="Account security" title="Choose a new password" description="Use at least 8 characters with a combination of letters and numbers.">
       <form onSubmit={submit} className="mt-7 space-y-5">
+        <p className="text-xs text-steel-600">Fields marked * are required.</p>
         <Field label="New password" htmlFor="new-password">
           <PasswordInput id="new-password" value={password} onChange={setPassword} visible={visible} onToggle={() => setVisible((value) => !value)} autoComplete="new-password" />
         </Field>
@@ -293,20 +315,20 @@ export function ResetPasswordForm({ resetKey, login }: { resetKey?: string; logi
 
 export function VerifyEmailForm({ token, email, sent }: { token?: string; email?: string; sent?: boolean }) {
   const [state, setState] = useState<"working" | "success" | "waiting" | "error">(sent ? "waiting" : "working");
-  const [message, setMessage] = useState(sent ? "Account created. Check your email for a verification link before signing in." : "Verifying your email...");
+  const [message, setMessage] = useState(sent ? "Check your email for a verification link before signing in. If it has not arrived, check spam or select Resend verification." : "Verifying your email...");
   const started = useRef(false);
 
   useEffect(() => {
     if (sent || started.current) return;
     started.current = true;
-    if (!token || !email) { setState("error"); setMessage("This verification link is invalid or incomplete."); return; }
-    authRequest("verify-email", { token, email }).then((data) => { setState("success"); setMessage(data.message ?? "Email verified."); }).catch((caught) => { setState("error"); setMessage(caught instanceof Error ? caught.message : "Unable to verify this email."); });
+    if (!token || !email) { setState("error"); setMessage("This verification link is incomplete. Open the full link from your latest verification email. If it still fails, contact support."); return; }
+    authRequest("verify-email", { token, email }).then((data) => { setState("success"); setMessage(data.message ?? "Email verified."); }).catch((caught) => { setState("error"); setMessage(customerErrorMessage(caught, "Unable to verify your email. Select Resend verification and open the newest email, or contact support.")); });
   }, [email, sent, token]);
 
   async function resend() {
     if (!email) return;
     try { const data = await authRequest("resend-verification", { email }); setState("waiting"); setMessage(data.message ?? "A new verification email has been sent."); }
-    catch (caught) { setState("error"); setMessage(caught instanceof Error ? caught.message : "Unable to resend verification."); }
+    catch (caught) { setState("error"); setMessage(customerErrorMessage(caught, "Unable to resend verification. Wait a few minutes and retry, or contact support.")); }
   }
 
   const icon = state === "success" ? <CheckIcon /> : state === "working" ? <SpinnerIcon /> : state === "error" ? <AlertIcon /> : <MailIcon />;
@@ -360,7 +382,8 @@ function Confirmation({ icon, children, tone = "default" }: { icon: ReactNode; c
 }
 
 function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
-  return <div><label htmlFor={htmlFor} className="field-label">{label}</label>{children}</div>;
+  const required = isValidElement<{ required?: boolean }>(children) && (children.props.required || children.type === PasswordInput);
+  return <div><label htmlFor={htmlFor} className="field-label">{label}{required ? <span className="text-signal-600"> *</span> : null}</label>{children}</div>;
 }
 
 function PasswordInput({ id, value, onChange, visible, onToggle, autoComplete = "current-password" }: { id: string; value: string; onChange: (value: string) => void; visible: boolean; onToggle: () => void; autoComplete?: "current-password" | "new-password" }) {

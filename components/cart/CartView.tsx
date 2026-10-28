@@ -8,7 +8,7 @@ import { IconTile } from "@/components/ui/IconTile";
 import { formatNumber, formatPrice, isPublicProductValue } from "@/lib/utils";
 
 export function CartView() {
-  const { items, subtotal, shipping, tax, total, shippingLabel, freeShippingRemaining, freeShippingLabel, quoteLoading, quoteError, stockValid, updateQuantity, removeItem, ready } = useCart();
+  const { items, subtotal, shipping, tax, total, shippingLabel, freeShippingRemaining, freeShippingLabel, quoteLoading, quoteError, stockValid, refreshQuote, updateQuantity, removeItem, ready } = useCart();
   const currency = items[0]?.currency ?? "";
 
   if (!ready) {
@@ -132,7 +132,7 @@ export function CartView() {
             Add {formatPrice(freeShippingRemaining, currency)} more to unlock {freeShippingLabel ?? "free shipping"}.
           </p>
         ) : null}
-        {quoteError ? <p className="mt-3 text-xs font-semibold text-signal-700">Shipping and tax totals are temporarily unavailable. Product subtotal is shown.</p> : null}
+        {quoteError ? <div role="alert" className="mt-3 text-xs font-semibold text-signal-700"><p>Shipping, tax and stock could not be checked. Only the product subtotal is shown. Check your connection and retry, or contact sales.</p><button type="button" onClick={refreshQuote} className="mt-2 underline">Retry totals and stock check</button></div> : null}
         <p className="mt-3 text-[11px] leading-relaxed text-steel-500">
           Product prices, shipping, VAT and totals reflect the selected quantities.
         </p>

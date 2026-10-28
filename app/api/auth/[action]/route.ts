@@ -127,7 +127,7 @@ export async function POST(request: NextRequest, { params }: { params: { action:
     return response;
   }
   const response = responseBody(result.data, result.status);
-  if (params.action === "logout") {
+  if (params.action === "logout" && result.data.ok) {
     response.cookies.delete(SESSION_COOKIE);
   }
   return response;

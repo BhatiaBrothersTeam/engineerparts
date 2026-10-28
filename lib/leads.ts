@@ -1,5 +1,6 @@
 import type { Lead, LeadType } from "@/lib/types";
 import { track } from "@/lib/analytics";
+import { CustomerError, customerRequest, validateCustomerFields } from "@/lib/customer-feedback";
 
 export interface LeadInput {
   lead_type: LeadType;
@@ -67,6 +68,14 @@ const EVENT_BY_TYPE: Record<LeadType, "enquiry_submit" | "whole_lot_enquiry" | "
 };
 
 export async function submitLead(input: LeadInput): Promise<Lead & { admin_email_sent?: boolean }> {
+  const validation = validateCustomerFields([
+    ["Name", input.contact], ["Email address", input.email, "email", 254],
+    ...(["general_contact", "product_enquiry", "whole_lot_enquiry", "equipment_enquiry"].includes(input.lead_type)
+      ? [["Company name", input.company], ["Phone number", input.phone]] as const : []),
+    ...(input.lead_type === "general_contact" ? [["Message", input.message, undefined, 5000]] as const : []),
+  ]);
+  if (validation) throw new CustomerError(validation);
+  if (input.message && input.message.length > 5000) throw new CustomerError("Message must be 5000 characters or fewer.");
   const draft: Lead = {
     lead_id: makeLeadId(),
     lead_type: input.lead_type,
@@ -77,10 +86,10 @@ export async function submitLead(input: LeadInput): Promise<Lead & { admin_email
     part_number: input.part_number,
     lot_id: input.lot_id,
     equipment_id: input.equipment_id,
-    company: input.company,
-    contact: input.contact,
-    email: input.email,
-    phone: input.phone,
+    company: input.company.trim(),
+    contact: input.contact.trim(),
+    email: input.email.trim(),
+    phone: input.phone.trim(),
     country: input.country,
     enquiry_type: input.enquiry_type,
     quantity: input.quantity,
@@ -92,13 +101,12 @@ export async function submitLead(input: LeadInput): Promise<Lead & { admin_email
     created_at: new Date().toISOString(),
   };
 
-  const response = await fetch("/api/leads", {
+  const result = await customerRequest<{ lead_id?: string; received_at?: string; admin_email_sent?: boolean }>("/api/leads", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(draft),
-  });
-  const result = (await response.json().catch(() => null)) as { lead_id?: string; received_at?: string; admin_email_sent?: boolean; error?: string } | null;
-  if (!response.ok || !result?.lead_id) throw new Error(result?.error || "Unable to submit your enquiry.");
+  }, "We could not confirm your enquiry. Try again shortly, or contact sales by phone or WhatsApp.");
+  if (!result.lead_id) throw new CustomerError("We could not confirm your enquiry. Contact sales before submitting it again.");
   const lead = { ...draft, lead_id: result.lead_id, created_at: result.received_at ?? draft.created_at };
   persist(lead);
   track(EVENT_BY_TYPE[input.lead_type], { lead_id: lead.lead_id, sku: lead.sku, lot_id: lead.lot_id, equipment_id: lead.equipment_id, quantity: lead.quantity });

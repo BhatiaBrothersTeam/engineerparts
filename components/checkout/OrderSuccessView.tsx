@@ -14,6 +14,7 @@ export interface OrderSummary {
   total: string;
   currency: string;
   paymentUrl: string;
+  paymentMethod?: string;
   items: Array<{ name: string; quantity: number; total: string }>;
 }
 
@@ -24,9 +25,10 @@ const POLL_SCHEDULE_MS = [3000, 5000, 8000, 13000, 20000, 20000, 20000];
 
 type ViewState = "confirmed" | "confirming" | "timed-out" | "failed";
 
-function deriveState(status: string): ViewState {
+function deriveState(status: string, paymentMethod?: string): ViewState {
   if (CONFIRMED_STATUSES.has(status)) return "confirmed";
   if (FAILED_STATUSES.has(status)) return "failed";
+  if (paymentMethod === "cod" && status === "on-hold") return "confirmed";
   return "confirming";
 }
 
@@ -40,9 +42,9 @@ export function OrderSuccessView({
   orderKey: string;
 }) {
   const { authenticated } = useAuth();
-  const { clear } = useCart();
+  const { clear, ready: cartReady } = useCart();
   const [order, setOrder] = useState(initialOrder);
-  const [view, setView] = useState<ViewState>(deriveState(initialOrder.status));
+  const [view, setView] = useState<ViewState>(deriveState(initialOrder.status, initialOrder.paymentMethod));
   const tracked = useRef(false);
   const cartCleared = useRef(false);
 
@@ -54,11 +56,11 @@ export function OrderSuccessView({
   }, [view, orderId, order.total, order.currency]);
 
   useEffect(() => {
-    if (view === "confirmed" && !cartCleared.current) {
+    if (view === "confirmed" && cartReady && !cartCleared.current) {
       cartCleared.current = true;
       clear();
     }
-  }, [view, clear]);
+  }, [view, cartReady, clear]);
 
   useEffect(() => {
     if (view !== "confirmed" && view !== "failed") return;
@@ -87,7 +89,7 @@ export function OrderSuccessView({
         const data = (await response.json().catch(() => null)) as { ok?: boolean; order?: OrderSummary } | null;
         if (cancelled) return;
         if (response.ok && data?.ok && data.order) {
-          const nextState = deriveState(data.order.status);
+          const nextState = deriveState(data.order.status, data.order.paymentMethod);
           setOrder(data.order);
           if (nextState !== "confirming") {
             setView(nextState);
@@ -133,8 +135,8 @@ export function OrderSuccessView({
           <span className="icon-tile h-14 w-14 bg-emerald-50 text-emerald-600" aria-hidden="true">
             <CheckCircleIcon />
           </span>
-          <p className="mt-4 text-xl font-extrabold text-navy-900">Thank you — your payment was successful</p>
-          <p className="mt-2 text-sm text-steel-600">Order <span className="font-semibold text-navy-800">#{order.number}</span> is confirmed. We&apos;ve emailed you a receipt.</p>
+          <p className="mt-4 text-xl font-extrabold text-navy-900">{order.paymentMethod === "cod" ? "Thank you — your Cash on Delivery order is confirmed" : "Thank you — your payment was successful"}</p>
+          <p className="mt-2 text-sm text-steel-600">Order <span className="font-semibold text-navy-800">#{order.number}</span> is confirmed. {order.paymentMethod === "cod" ? "No online payment was taken. Please pay in cash when your order arrives." : "We've emailed you a receipt."}</p>
         </div>
         <OrderItems order={order} />
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
@@ -161,7 +163,7 @@ export function OrderSuccessView({
           <p className="mt-4 text-xl font-extrabold text-navy-900">{cancelled ? "Payment attempt expired or was cancelled" : "Payment did not go through"}</p>
           <p className="mt-2 text-sm text-steel-600">
             {cancelled
-              ? `Order #${order.number} was cancelled. WooCommerce has released its stock hold; review your cart and try again.`
+              ? `Order #${order.number} was cancelled and its reserved stock was released; review your cart and try again.`
               : `Order #${order.number} was not paid. Your cart has been kept so you can try again, or contact our sales team.`}
           </p>
         </div>
@@ -182,7 +184,7 @@ export function OrderSuccessView({
           </IconTile>
           <p className="mt-4 text-xl font-extrabold text-navy-900">Still confirming your payment</p>
           <p className="mt-2 text-sm text-steel-600">
-            This is taking longer than usual, but your order #{order.number} is safe. We&apos;ll email your receipt as soon as it clears — no need to keep this tab open.
+            We could not confirm the payment status for order #{order.number} yet. Check your connection and refresh this page, or contact support with your order number. Do not pay again or place another order until its status is confirmed.
           </p>
         </div>
         <div className="mt-6 flex flex-wrap justify-center gap-3 sm:justify-start">

@@ -15,7 +15,7 @@ export default async function AddressesPage() {
       {data ? (
         <AddressesForm customer={data.customer} countries={countries} />
       ) : (
-        <p className="card p-5 text-sm text-signal-700">Addresses are temporarily unavailable.</p>
+        <p role="alert" className="card p-5 text-sm text-signal-700">Addresses could not be loaded. Refresh to retry, sign in again if your session expired, or contact support. You can enter delivery details manually at checkout.</p>
       )}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { submitLead } from "@/lib/leads";
+import { customerErrorMessage, validateCustomerFields } from "@/lib/customer-feedback";
 
 interface FormState {
   name: string;
@@ -35,8 +36,9 @@ export function ContactForm() {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    if (!form.name.trim() || !form.company.trim() || !form.email.trim() || !form.phone.trim() || !form.message.trim()) {
-      setError("Please provide your name, company, email, phone and a message.");
+    const validation = validateCustomerFields([["Name", form.name], ["Company name", form.company], ["Email address", form.email, "email", 254], ["Phone number", form.phone], ["Message", form.message, undefined, 5000]]);
+    if (validation) {
+      setError(validation);
       return;
     }
     setState("sending");
@@ -56,11 +58,7 @@ export function ContactForm() {
       setState("done");
     } catch (cause) {
       setState("idle");
-      setError(
-        cause instanceof Error && cause.message !== "Failed to fetch"
-          ? cause.message
-          : "Something went wrong. Please try again or use WhatsApp.",
-      );
+      setError(customerErrorMessage(cause, "We could not confirm your message. Try again shortly, or contact sales by phone or WhatsApp."));
     }
   }
 
@@ -95,6 +93,7 @@ export function ContactForm() {
 
   return (
     <form onSubmit={onSubmit} className="rounded-card border border-navy-100 bg-white p-4 shadow-card sm:p-6">
+      <p className="mb-4 text-xs text-steel-600">Fields marked * are required.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name" required>
           <input className="field" value={form.name} onChange={(e) => update("name", e.target.value)} required />

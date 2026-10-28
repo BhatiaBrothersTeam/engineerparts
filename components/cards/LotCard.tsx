@@ -8,25 +8,32 @@ import { ConditionPill, ListingBadges, StatusPill } from "@/components/ui/Badge"
 import type { Lot } from "@/lib/types";
 import { downloadCsv } from "@/lib/download";
 import { formatNumber, formatPrice, relativeAdded } from "@/lib/utils";
+import { customerErrorMessage } from "@/lib/customer-feedback";
+import { logError } from "@/lib/logger";
 
 export function LotCard({ lot }: { lot: Lot }) {
   const { openEnquiry } = useEnquiry();
   const { toast } = useToast();
 
   function onDownload() {
-    downloadCsv(
-      `${lot.lot_reference}-inventory.csv`,
-      lot.items.map((item) => ({
-        Item: item.item,
-        Brand: item.brand,
-        "Part Number": item.part_number,
-        Description: item.description,
-        Quantity: item.quantity,
-        Condition: item.condition,
-      })),
-      { reference: lot.lot_reference, source: "lot_card" },
-    );
-    toast(`${lot.lot_reference} inventory list downloaded`);
+    try {
+      downloadCsv(
+        `${lot.lot_reference}-inventory.csv`,
+        lot.items.map((item) => ({
+          Item: item.item,
+          Brand: item.brand,
+          "Part Number": item.part_number,
+          Description: item.description,
+          Quantity: item.quantity,
+          Condition: item.condition,
+        })),
+        { reference: lot.lot_reference, source: "lot_card" },
+      );
+      toast(`${lot.lot_reference} inventory download started. Check your browser downloads.`);
+    } catch (error) {
+      logError("lot.download_failed", { error });
+      toast(customerErrorMessage(error, "The inventory download could not start. Allow downloads for this site and retry, or contact sales."), "error");
+    }
   }
 
   return (

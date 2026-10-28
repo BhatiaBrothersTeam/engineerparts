@@ -12,7 +12,7 @@ export default async function EnquiriesPage() {
         title="Enquiries / RFQs"
         description="Your submitted enquiries, saved to your verified customer account."
       />
-      {data ? <EnquiriesView enquiries={data.enquiries} /> : <p className="card p-5 text-sm text-signal-700">Enquiries are temporarily unavailable.</p>}
+      {data ? <EnquiriesView enquiries={data.enquiries} /> : <p role="alert" className="card p-5 text-sm text-signal-700">Enquiries could not be loaded. Refresh to retry or sign in again. If the problem continues, contact support with your enquiry references.</p>}
     </div>
   );
 }

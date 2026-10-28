@@ -14,5 +14,5 @@ export default async function ProfilePage() {
 }
 
 function Unavailable() {
-  return <p className="card p-5 text-sm text-signal-700">Account details are temporarily unavailable.</p>;
+  return <p role="alert" className="card p-5 text-sm text-signal-700">Account details could not be loaded. Refresh to retry, sign in again if your session expired, or contact support.</p>;
 }

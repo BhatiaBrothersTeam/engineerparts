@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { submitLead } from "@/lib/leads";
+import { customerErrorMessage, validateCustomerFields } from "@/lib/customer-feedback";
 
 interface BulkForm {
   name: string;
@@ -38,8 +39,9 @@ export function BulkDealSection() {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    if (!form.name.trim() || !form.company.trim() || !form.email.trim()) {
-      setError("Please provide your name, company and email address.");
+    const validation = validateCustomerFields([["Name", form.name], ["Company name", form.company], ["Email address", form.email, "email", 254]]);
+    if (validation) {
+      setError(validation);
       return;
     }
     setState("sending");
@@ -57,9 +59,9 @@ export function BulkDealSection() {
       });
       setReference(lead.lead_id);
       setState("done");
-    } catch {
+    } catch (error) {
       setState("idle");
-      setError("Something went wrong. Please try again or contact us on WhatsApp.");
+      setError(customerErrorMessage(error, "We could not confirm your bulk enquiry. Try again shortly, or contact sales by phone or WhatsApp."));
     }
   }
 
@@ -109,6 +111,7 @@ export function BulkDealSection() {
           </div>
         ) : (
           <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2">
+            <p className="text-xs text-steel-300 sm:col-span-2">Fields marked * are required.</p>
             <DarkField label="Name" value={form.name} onChange={(v) => update("name", v)} required />
             <DarkField label="Company" value={form.company} onChange={(v) => update("company", v)} required />
             <DarkField label="Email" type="email" value={form.email} onChange={(v) => update("email", v)} required />

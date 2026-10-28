@@ -67,6 +67,7 @@ export interface WooOrder {
   payment_url: string;
   order_key: string;
   status: string;
+  payment_method: string;
   line_items: Array<{
     product_id: number;
     name: string;
@@ -388,6 +389,7 @@ interface StoreCartResponse {
   totals: {
     total_items: string;
     total_items_tax: string;
+    total_discount?: string;
     total_shipping: string | null;
     total_shipping_tax: string | null;
     total_price: string;
@@ -410,6 +412,7 @@ interface StoreCartResponse {
 
 interface StoreCheckoutResponse {
   order_id: number;
+  order_key?: string;
   status: string;
   payment_result: {
     payment_status: "success" | "failure" | "pending" | "error";
@@ -496,6 +499,7 @@ export async function submitWooCommerceCheckout(input: {
   customerNote: string;
   idempotencyKey: string;
   requestHash: string;
+  paymentMethod?: "nomod" | "cod";
 }): Promise<StoreCheckoutResponse> {
   const config = configuration();
   if (!config) throw new Error("WooCommerce is not configured");
@@ -581,7 +585,7 @@ export async function submitWooCommerceCheckout(input: {
         billing_address: input.billing,
         shipping_address: input.shipping,
         customer_note: input.customerNote,
-        payment_method: "nomod",
+        payment_method: input.paymentMethod ?? "nomod",
       },
     }),
     signal: AbortSignal.timeout(60_000),
@@ -602,11 +606,14 @@ export async function submitWooCommerceCheckout(input: {
       response.status,
     );
   }
-  if (!resultBody?.ok || !resultBody.checkout?.payment_result) {
+  if (!resultBody?.ok || !resultBody.checkout?.payment_result || !Number.isSafeInteger(resultBody.checkout.order_id) || resultBody.checkout.order_id <= 0) {
     throw new Error("The checkout service returned an invalid response");
   }
   const checkout = resultBody.checkout;
-  if (checkout.payment_result.redirect_url) {
+  if (input.paymentMethod === "cod") {
+    if (!isValidWooCommerceOrderKey(checkout.order_key ?? "")) throw new Error("Cash on Delivery confirmation is incomplete");
+    checkout.payment_result.redirect_url = `/checkout/success?order_id=${checkout.order_id}&order_key=${encodeURIComponent(checkout.order_key ?? "")}`;
+  } else if (checkout.payment_result.redirect_url) {
     try {
       const target = new URL(checkout.payment_result.redirect_url);
       if (
@@ -799,9 +806,22 @@ export async function getWooCommerceCartQuote(
   });
   if (!response.ok) throw new Error("WooCommerce could not calculate cart totals");
 
-  const cart = (await response.json()) as StoreCartResponse;
+  let cart = (await response.json()) as StoreCartResponse;
+  for (const shipment of cart.shipping_rates) {
+    const rates = shipment.shipping_rates;
+    const chosen = rates.find((rate) => rate.method_id === "free_shipping") ?? rates.find((rate) => rate.selected) ?? rates[0];
+    if (!chosen || chosen.selected) continue;
+    const selected = await fetch(`${storeApi}/cart/select-shipping-rate`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ package_id: shipment.package_id, rate_id: chosen.rate_id }),
+      cache: "no-store",
+    });
+    if (!selected.ok) throw new Error("WooCommerce could not select the quoted shipping rate");
+    cart = (await selected.json()) as StoreCartResponse;
+  }
   const divisor = 10 ** cart.totals.currency_minor_unit;
-  const subtotal = Number(cart.totals.total_items) / divisor;
+  const subtotal = (Number(cart.totals.total_items) - Number(cart.totals.total_discount ?? 0)) / divisor;
   const shippingRate = cart.shipping_rates
     .flatMap((shipment) => shipment.shipping_rates)
     .find((rate) => rate.selected) ?? cart.shipping_rates.flatMap((shipment) => shipment.shipping_rates)[0];
@@ -819,10 +839,10 @@ export async function getWooCommerceCartQuote(
     total: shippingRate ? Number(cart.totals.total_price) / divisor : subtotal + shipping + tax,
     currency: cart.totals.currency_code,
     shippingLabel: shippingRate?.name ?? fallbackShipping?.title ?? cart.shipping_rates[0]?.name ?? "Shipping",
-    freeShippingRemaining: configured.freeShipping
-      ? Math.max(0, configured.freeShipping.minimum - subtotal)
-      : undefined,
-    freeShippingLabel: configured.freeShipping?.title,
+    freeShippingRemaining: cart.totals.currency_code === "AED"
+      ? Math.max(0, 200 - subtotal)
+      : configured.freeShipping ? Math.max(0, configured.freeShipping.minimum - subtotal) : undefined,
+    freeShippingLabel: cart.totals.currency_code === "AED" ? "free delivery" : configured.freeShipping?.title,
     stockLimits,
     shippingMethod: shippingRate
       ? {

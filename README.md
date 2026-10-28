@@ -12,6 +12,18 @@ Engineerparts is a responsive industrial marketplace built with Next.js. It prov
 - Browser `localStorage` for the cart and client-side enquiry history
 - WordPress/WooCommerce customer authentication through secure server-side proxying
 
+Checkout accepts non-empty first and last names, including single-character names and initials. Customer carts are saved separately by customer ID in this browser. Successful sign-out hides the customer's cart and resets quoted totals and the checkout retry reference across open tabs; signing back into the same account restores its saved items. Other customers cannot see that cart through the storefront. Guest items merge into the customer's saved cart on sign-in, capped by stock, and are no longer shown after logout. Explicit cart clearing and confirmed checkout remove the active saved items. History-restored pages reload the current browser cart. Carts do not sync across devices and are lost if site storage is cleared; carts permanently deleted by the previous logout behavior cannot be recovered.
+
+Customer-facing forms mark mandatory fields with an asterisk (*) and explain the marker; optional fields remain unmarked. They identify missing or invalid fields and preserve entered values after failures. Account, checkout, enquiry and subscription requests use safe recovery messages for expired sessions, rate limits, CAPTCHA failures and connectivity problems; internal service details are logged rather than displayed. Uncertain order/payment outcomes instruct customers to check the existing order before retrying. Run the focused regression checks with `node --test scripts/test-checkout-logout.cjs`.
+
+## Checkout payment and delivery rules
+
+Deploy the website with Customer Accounts plugin **1.9.3**. In WooCommerce payment settings, enable both Nomod (`nomod`) and Cash on delivery (`cod`), allowing the storefront's shipping methods. COD is offered for UAE delivery addresses only and adds no fee. COD submission shows an order-placement message and opens the local order confirmation, without an online-payment handoff. Online payment remains available for other supported destinations.
+
+In an AED store, products totalling **AED 200 or more after discounts and before VAT/delivery** qualify for free delivery to all supported destinations. Below AED 200, existing WooCommerce shipping rates apply. The plugin applies the rule to actual shipping rates and shipping tax, including native WooCommerce checkout; it does not add shipping zones or alter local pickup. Do not configure conflicting COD surcharges in other extensions. Run server-policy checks with `php scripts/test-checkout-policy.php`.
+
+Customer transactional emails share the EngineerParts theme and use the public website for account/order links. Email payment links open `/checkout/pay`, where a deliberate submit rechecks the order key and unpaid status before requesting a hosted Nomod payment. Keep the four WooCommerce pages configured; ordinary public storefront visits redirect to the main website, while payment/API/admin endpoints remain available. Deploy both website and plugin. Run email/redirect checks with `php scripts/test-customer-emails.php`. Third-party emails, PDF contents and gateway screens require separate review.
+
 ## Prerequisites
 
 Install the following before running the project:

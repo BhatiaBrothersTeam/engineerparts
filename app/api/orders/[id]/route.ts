@@ -27,6 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         total: order.total,
         currency: order.currency,
         paymentUrl: order.payment_url,
+        paymentMethod: order.payment_method,
         items: order.line_items.map((item) => ({
           name: item.name,
           quantity: item.quantity,

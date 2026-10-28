@@ -38,7 +38,7 @@ export function DocumentList({
             type="button"
             onClick={() => {
               track("document_download", { reference, source, document: doc.name, format: doc.type });
-              toast(`${doc.name} requested. The clearance desk will send this document.`);
+              toast(`Direct download is unavailable. Contact sales and quote ${reference} to request ${doc.name}.`, "info");
             }}
             className="btn-outline btn-sm shrink-0"
           >

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { submitLead } from "@/lib/leads";
 import { IconTile } from "@/components/ui/IconTile";
+import { customerErrorMessage, validateCustomerFields } from "@/lib/customer-feedback";
 
 interface FormState {
   name: string;
@@ -49,8 +50,9 @@ export function ListingEnquiryForm() {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    if (!form.name.trim() || !form.company.trim() || !form.email.trim() || !form.phone.trim()) {
-      setError("Please provide your name, company, email and phone number.");
+    const validation = validateCustomerFields([["Name", form.name], ["Company name", form.company], ["Email address", form.email, "email", 254], ["Phone number", form.phone]]);
+    if (validation) {
+      setError(validation);
       return;
     }
 
@@ -80,11 +82,7 @@ export function ListingEnquiryForm() {
       setState("done");
     } catch (cause) {
       setState("idle");
-      setError(
-        cause instanceof Error && cause.message !== "Failed to fetch"
-          ? cause.message
-          : "Something went wrong. Please try again or use WhatsApp.",
-      );
+      setError(customerErrorMessage(cause, "We could not confirm your enquiry. Try again shortly, or contact sales by phone or WhatsApp."));
     }
   }
 
@@ -139,7 +137,7 @@ export function ListingEnquiryForm() {
           <input className="field" value={form.country} onChange={(e) => update("country", e.target.value)} />
         </Field>
         <Field label="Enquiry type" required>
-          <select className="field" value={form.enquiryType} onChange={(e) => update("enquiryType", e.target.value as FormState["enquiryType"])}>
+          <select className="field" value={form.enquiryType} onChange={(e) => update("enquiryType", e.target.value as FormState["enquiryType"])} required>
             {ENQUIRY_TYPES.map((type) => (
               <option key={type.value} value={type.value}>{type.label}</option>
             ))}

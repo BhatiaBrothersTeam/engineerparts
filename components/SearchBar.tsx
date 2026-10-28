@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SuggestionGroups } from "@/lib/search";
 import { track } from "@/lib/analytics";
 import { formatPrice } from "@/lib/utils";
+import { logError } from "@/lib/logger";
 
 interface SearchBarProps {
   variant?: "header" | "hero";
@@ -28,11 +29,13 @@ export function SearchBar({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [groups, setGroups] = useState<SuggestionGroups | null>(null);
+  const [suggestionsFailed, setSuggestionsFailed] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const term = query.trim();
+    setSuggestionsFailed(false);
     if (term.length < 2) {
       setGroups(null);
       return;
@@ -44,9 +47,14 @@ export function SearchBar({
         const response = await fetch(`/api/search?q=${encodeURIComponent(term)}`, {
           signal: controller.signal,
         });
-        if (response.ok) setGroups((await response.json()) as SuggestionGroups);
+        if (!response.ok) throw new Error(`Search suggestions failed: ${response.status}`);
+        if (!controller.signal.aborted) setGroups((await response.json()) as SuggestionGroups);
       } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) setGroups(null);
+        if (!controller.signal.aborted) {
+          logError("search.suggestions_failed", { error });
+          setGroups(null);
+          setSuggestionsFailed(true);
+        }
       }
     }, 200);
 
@@ -168,6 +176,7 @@ export function SearchBar({
         </button>
       </form>
 
+      {open && suggestionsFailed ? <p role="status" className="mt-2 rounded-md bg-white p-3 text-sm text-signal-700">Suggestions could not be loaded. Check your connection, or press Search to try the full search page.</p> : null}
       {open && groups ? (
         <div
           id="search-suggestions"

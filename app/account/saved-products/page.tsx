@@ -16,7 +16,7 @@ export default async function SavedProductsPage() {
   return (
     <div>
       <AccountSectionHeader eyebrow="Your shortlist" title="Saved products" description="Products saved to your customer account." />
-      {saved.length ? (
+      {!data ? <p role="alert" className="card p-5 text-sm text-signal-700">Saved products could not be loaded. Refresh to retry or sign in again. Your saved list has not been deleted.</p> : saved.length ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {saved.map((product) => (
             <ProductCard key={product.id} product={product} />

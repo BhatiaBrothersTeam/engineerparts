@@ -4,9 +4,9 @@ This plugin provides the restricted WordPress endpoints used by the EngineerPart
 
 ## Install
 
-1. In WordPress, go to **Plugins > Add New Plugin > Upload Plugin**, choose `engineerparts-customer-accounts-1.8.5.zip`, and install it. The ZIP contains a single `engineerparts-customer-accounts` plugin folder.
+1. In WordPress, go to **Plugins > Add New Plugin > Upload Plugin**, choose `engineerparts-customer-accounts-1.9.3.zip`, and install it. The ZIP contains a single `engineerparts-customer-accounts` plugin folder.
 2. If the older **EngineerParts Customer Accounts** plugin is already installed, deactivate it before activating this package. This package uses a new folder name to avoid WordPress failing while trying to replace a locked or non-writable plugin directory. Keep the old folder as a backup until the new plugin is activated and its API is verified; never run both copies at once.
-3. Add these constants to `wp-config.php`, using the same randomly generated secret as the Next.js `ENGINEERPARTS_PROXY_SECRET` environment variable:
+3. Add these constants to `wp-config.php`, using the same randomly generated secret as the Next.js `ENGINEERPARTS_PROXY_SECRET` environment variable. Registration will show “Account registration verification is not configured” until `ENGINEERPARTS_TURNSTILE_SECRET` is set to the secret key for the Cloudflare Turnstile widget used by the storefront:
 
    ```php
    define('ENGINEERPARTS_PROXY_SECRET', 'replace-with-at-least-32-random-characters');
@@ -24,7 +24,27 @@ After verifying the new plugin is active and `/wp-json/engineerparts/v1/` is ava
 
 Headless checkout submits orders through WooCommerce's Store API checkout endpoint and follows the gateway's `payment_result.redirect_url` directly. The storefront forwards WooCommerce's current Store API nonce and cart token to the protected checkout proxy; the plugin restores the cart token to WordPress request context for WooCommerce to load the same cart. Do not disable WooCommerce nonce checks. Confirm the Nomod gateway is enabled and its WooCommerce payment method ID is `nomod`.
 
+## Cash on Delivery and free delivery (1.9.2)
+
+- Enable **WooCommerce > Settings > Payments > Cash on delivery** (gateway ID `cod`). Allow the delivery methods used by the storefront. No additional COD fee is added by this integration; remove any COD surcharges configured in other extensions if present.
+- The storefront offers COD only when the actual delivery address is in the UAE (`AE`). The protected checkout endpoint rejects COD for other destinations. Online payment through Nomod remains available.
+- COD uses WooCommerce's checkout, order emails, inventory handling and order status. Confirmation says to pay on delivery, not that payment was received. Repeated submissions reuse the same order; changing payment methods after an order exists requires resolving that order first.
+- For an AED store, a product subtotal **after discounts, before VAT and delivery, of AED 200 or more** makes all existing delivery rates free, including shipping tax. This applies to every supported destination, not only the UAE. Existing rates apply below AED 200; no new shipping zones or unsupported destinations are introduced. Local pickup rates are unchanged.
+- The delivery rule also applies to native WooCommerce carts/checkouts so all channels charge consistently. Other store currencies are not converted to AED and retain their existing rates.
+- Deploy the website and plugin together. The website reads shipping totals from WooCommerce; installing only one side is insufficient.
+
 Generate the shared secret with a password manager or `openssl rand -hex 32`. Never expose it through a `NEXT_PUBLIC_` variable.
+
+## Customer-facing emails and pages (1.9.3)
+
+- Keep the Shop, Cart, Checkout and My account pages published and assigned in WooCommerce. Do not delete them: gateways and internal order URLs can depend on their IDs and endpoints.
+- Ordinary public visits to the backend home, shop, product/category, cart, checkout and account pages redirect to `ENGINEERPARTS_FRONTEND_URL`. Admin access, APIs, AJAX, cron, POST requests, gateway callbacks and `order-pay` are not redirected. Valid order-received links go to the storefront confirmation; invalid keys never expose the order.
+- Customer WooCommerce HTML/multipart messages use the same black/red EngineerParts shell as the plugin's verification, enquiry and contact emails, preserving order details and attachments. Plain-text emails stay plain text. Admin email bodies are not rewritten. Sender display names are EngineerParts; keep authenticated SMTP sender-address settings unchanged.
+- Customer email links to the backend are mapped to public storefront routes. Backend-hosted email images are omitted rather than replaced with broken frontend images. Core customer welcome/password/email-change notifications are branded too; administrator password-reset links remain unchanged.
+- Order-payment links open `/checkout/pay` on the main website, including guest orders. An explicit button starts the existing Nomod payment after the order key/status are rechecked; merely opening/scanning an email link does not start payment. Deploy the website before installing this version. COD never starts online payment.
+- Keep PHP DOM/XML enabled for formatted email content. Without it, an explicit server log warns and order text is preserved inside the branded shell without its original table formatting. Run `php scripts/test-customer-emails.php` and send real test messages from each enabled customer email type after deployment.
+- WooCommerce download links lead to the account order page instead of backend download endpoints. The storefront does not implement digital-file delivery; if you sell downloadable products, add an authorized storefront download flow before enabling this policy.
+- This covers plugin, core customer account and WooCommerce emails, not third-party SMTP-provider footers, marketing plugins, PDF attachment contents, transport headers or payment-provider messages. Audit those separately. Necessary gateway/payment screens may still use the backend; hiding the hostname throughout those flows requires gateway-specific integration, not deleting pages.
 
 ## WordPress requirements
 
@@ -38,6 +58,10 @@ Generate the shared secret with a password manager or `openssl rand -hex 32`. Ne
 
 No JWT plugin is required. Browser requests go only to Next.js, so WordPress CORS access for `engineerparts.com` is not required.
 
+## Email verification troubleshooting
+
+Version 1.9.1 URL-encodes email addresses in verification links so a `+` in an email address is not decoded as a space. After upgrading, use **Resend verification** to obtain a corrected link. Previously sent links are not rewritten, and resending replaces the previous verification token.
+
 ## Security model
 
 - Customer passwords are verified by WordPress and are never stored by Next.js.
@@ -48,7 +72,7 @@ No JWT plugin is required. Browser requests go only to Next.js, so WordPress COR
 - Registration CAPTCHA tokens are verified by WordPress with Cloudflare Turnstile before a WooCommerce customer is created; registration fails closed if the secret is not configured or verification cannot complete.
 - Unverified customers cannot sign in.
 - Every order lookup verifies that the authenticated customer owns the WooCommerce order.
-- Account checkout uses a five-minute, single-use payment handoff so WordPress can sign in the order owner and open the payment page. The resulting browser login expires within one hour. Customer passwords are never included in the handoff.
+- Nomod account payment links use the storefront's key-validated `/checkout/pay` page and do not sign customers into the backend. Other gateways retain the five-minute, single-use payment handoff so the backend can sign in the order owner and open the payment page. That browser login expires within one hour. Customer passwords are never included in the handoff.
 - Headless order checkout is serialized by an idempotency key before the request is passed to WooCommerce's Store API. WooCommerce remains responsible for validating, reserving, reducing, and releasing stock; the storefront does not change product stock directly. Retries for the same checkout reuse the existing WooCommerce order instead of creating a second one.
 
 Enable **Manage stock** and set a real stock quantity on every inventory-limited product. In **WooCommerce > Settings > Products > Inventory**, set **Hold stock (minutes)** to a positive period appropriate for payment completion (60 minutes is a reasonable starting point). Keep WP-Cron/Action Scheduler running so expired unpaid orders are cancelled and their stock holds released. Do not set the hold period to zero if customers need time to complete hosted payment.

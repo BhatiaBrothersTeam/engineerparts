@@ -7,6 +7,7 @@ import { ConditionPill, ListingBadges, StatusPill } from "@/components/ui/Badge"
 import { useToast } from "@/components/providers/ToastProvider";
 import type { Equipment } from "@/lib/types";
 import { formatNumber, formatPrice, relativeAdded } from "@/lib/utils";
+import { logError } from "@/lib/logger";
 
 export function EquipmentCard({ unit }: { unit: Equipment }) {
   const { openEnquiry } = useEnquiry();
@@ -93,9 +94,15 @@ export function EquipmentCard({ unit }: { unit: Equipment }) {
             </button>
             <button
               type="button"
-              onClick={() => {
-                navigator.clipboard?.writeText(unit.serial_number).catch(() => undefined);
-                toast(`Serial ${unit.serial_number} copied`);
+              onClick={async () => {
+                try {
+                  if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+                  await navigator.clipboard.writeText(unit.serial_number);
+                  toast(`Serial ${unit.serial_number} copied`);
+                } catch (error) {
+                  logError("equipment.clipboard_failed", { error });
+                  toast("Copy was blocked by your browser. Select the serial number and copy it manually.", "error");
+                }
               }}
               className="btn-outline btn-sm"
             >

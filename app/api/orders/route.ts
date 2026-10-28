@@ -33,6 +33,7 @@ interface OrderPayload {
   items: Array<{ productId: string; quantity: number }>;
   saveAddress?: boolean;
   acceptPolicies: true;
+  paymentMethod?: "nomod" | "cod";
   trn?: string;
   customer_note?: string;
 }
@@ -64,6 +65,8 @@ function validPayload(value: unknown): value is OrderPayload {
       typeof billing.phone === "string" &&
       isValidInternationalPhone(billing.phone) &&
       payload.acceptPolicies === true &&
+      (payload.paymentMethod === undefined || payload.paymentMethod === "nomod" || payload.paymentMethod === "cod") &&
+      (payload.paymentMethod !== "cod" || (customer?.shipping ?? billing).country === "AE") &&
       Array.isArray(payload.items) &&
       payload.items.length > 0 &&
       payload.items.length <= 50 &&
@@ -89,9 +92,9 @@ function validAddress(value: unknown): value is CustomerAddress {
   const address = value as Partial<CustomerAddress>;
   return Boolean(
     typeof address.firstName === "string" &&
-      address.firstName.trim().length >= 2 &&
+      address.firstName.trim().length >= 1 &&
       typeof address.lastName === "string" &&
-      address.lastName.trim().length >= 2 &&
+      address.lastName.trim().length >= 1 &&
       typeof address.company === "string" &&
       typeof address.address1 === "string" &&
       isPlausibleAddress(address.address1) &&
@@ -196,6 +199,7 @@ export async function POST(request: NextRequest) {
         customerNote: payload.customer_note?.trim() ?? "",
         trn: payload.trn?.trim() ?? "",
         saveAddress: Boolean(payload.saveAddress),
+        paymentMethod: payload.paymentMethod ?? "nomod",
       }))
       .digest("hex");
     const checkout = await submitWooCommerceCheckout({
@@ -205,6 +209,7 @@ export async function POST(request: NextRequest) {
       customerNote,
       idempotencyKey: payload.order_id.trim(),
       requestHash,
+      paymentMethod: payload.paymentMethod ?? "nomod",
     });
     const paymentUrl = checkout.payment_result.redirect_url;
 
@@ -261,6 +266,12 @@ export async function POST(request: NextRequest) {
       payment_url: paymentUrl,
     });
   } catch (error) {
+    if (
+      error instanceof WooCommerceStoreApiError &&
+      (error.code === "cod_unavailable" || error.code === "cod_country_not_supported")
+    ) {
+      return NextResponse.json({ ok: false, code: error.code, error: "Cash on Delivery is unavailable. Choose online payment or contact sales." }, { status: 422 });
+    }
     if (
       error instanceof WooCommerceStoreApiError &&
       error.path === "/checkout" &&

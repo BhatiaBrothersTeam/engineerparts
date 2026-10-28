@@ -11,7 +11,7 @@ export default async function SecurityPage() {
       {data ? (
         <SecurityForm activeSessionCount={data.customer.activeSessionCount} />
       ) : (
-        <p className="card p-5 text-sm text-signal-700">Security information is temporarily unavailable.</p>
+        <p role="alert" className="card p-5 text-sm text-signal-700">Security information could not be loaded. Refresh to retry, sign in again if your session expired, or use Forgot password to reset your password.</p>
       )}
     </div>
   );

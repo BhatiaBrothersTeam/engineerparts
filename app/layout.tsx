@@ -40,9 +40,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en-AE">
       <body className="flex min-h-screen flex-col bg-white">
         <ToastProvider>
-          <AuthProvider>
-            <SavedProductsProvider>
-              <CartProvider>
+          <CartProvider>
+            <AuthProvider>
+              <SavedProductsProvider>
                 <EnquiryProvider>
                   <TopBar />
                   <Header categories={categories} />
@@ -51,9 +51,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <FloatingWhatsApp />
                   <EnquiryModal />
                 </EnquiryProvider>
-              </CartProvider>
-            </SavedProductsProvider>
-          </AuthProvider>
+              </SavedProductsProvider>
+            </AuthProvider>
+          </CartProvider>
         </ToastProvider>
         <CookieConsent />
         <ClientErrorReporter />

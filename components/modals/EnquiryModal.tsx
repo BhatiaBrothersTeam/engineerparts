@@ -6,6 +6,7 @@ import { useToast } from "@/components/providers/ToastProvider";
 import { submitLead } from "@/lib/leads";
 import { cn, formatNumber, formatPrice, isPurchasable } from "@/lib/utils";
 import type { LeadType } from "@/lib/types";
+import { customerErrorMessage, validateCustomerFields } from "@/lib/customer-feedback";
 
 interface FormState {
   name: string;
@@ -114,12 +115,13 @@ export function EnquiryModal() {
     event.preventDefault();
     setError(null);
 
-    if (!form.name.trim() || !form.email.trim() || !form.company.trim() || !form.phone.trim()) {
-      setError("Please provide your name, company, email and phone number.");
+    const validation = validateCustomerFields([["Name", form.name], ["Company name", form.company], ["Email address", form.email, "email", 254], ["Phone number", form.phone]]);
+    if (validation) {
+      setError(validation);
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      setError("Please provide a valid email address.");
+    if (!Number.isInteger(quantityWanted) || quantityWanted < 1) {
+      setError("Enter a quantity that is a whole number greater than zero.");
       return;
     }
     if (exceedsAvailable) {
@@ -162,8 +164,8 @@ export function EnquiryModal() {
 
       setSubmitted(lead.lead_id);
       toast("Enquiry submitted. Reference " + lead.lead_id);
-    } catch {
-      setError("Something went wrong submitting your enquiry. Please try again or use WhatsApp.");
+    } catch (error) {
+      setError(customerErrorMessage(error, "We could not confirm your enquiry. Try again shortly, or contact sales by phone or WhatsApp."));
     } finally {
       setSubmitting(false);
     }
@@ -235,6 +237,7 @@ export function EnquiryModal() {
           </div>
         ) : (
           <form onSubmit={onSubmit} className="overflow-y-auto p-4 sm:p-5">
+            <p className="mb-4 text-xs text-steel-600">Fields marked * are required.</p>
             {product ? (
               <ContextPanel
                 rows={[
@@ -330,10 +333,12 @@ export function EnquiryModal() {
 
               <Field
                 label={mode === "lot" ? "Quantity required from lot" : "Quantity required"}
+                required
                 hint={availableQuantity !== null ? `${formatNumber(availableQuantity)} available` : undefined}
               >
                 <input
                   type="number"
+                  required
                   min={1}
                   max={availableQuantity ?? undefined}
                   className="field"

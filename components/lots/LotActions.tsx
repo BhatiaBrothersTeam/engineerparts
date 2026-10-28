@@ -4,6 +4,8 @@ import { useEnquiry } from "@/components/providers/EnquiryProvider";
 import { useToast } from "@/components/providers/ToastProvider";
 import { downloadCsv } from "@/lib/download";
 import { track } from "@/lib/analytics";
+import { customerErrorMessage } from "@/lib/customer-feedback";
+import { logError } from "@/lib/logger";
 import type { Lot } from "@/lib/types";
 import {
   absoluteUrl,
@@ -18,19 +20,24 @@ export function LotActions({ lot }: { lot: Lot }) {
   const { toast } = useToast();
 
   function onDownload() {
-    downloadCsv(
-      `${lot.lot_reference}-inventory.csv`,
-      lot.items.map((item) => ({
-        Item: item.item,
-        Brand: item.brand,
-        "Part Number": item.part_number,
-        Description: item.description,
-        Quantity: item.quantity,
-        Condition: item.condition,
-      })),
-      { reference: lot.lot_reference, source: "lot_page" },
-    );
-    toast(`${lot.lot_reference} inventory list downloaded`);
+    try {
+      downloadCsv(
+        `${lot.lot_reference}-inventory.csv`,
+        lot.items.map((item) => ({
+          Item: item.item,
+          Brand: item.brand,
+          "Part Number": item.part_number,
+          Description: item.description,
+          Quantity: item.quantity,
+          Condition: item.condition,
+        })),
+        { reference: lot.lot_reference, source: "lot_page" },
+      );
+      toast(`${lot.lot_reference} inventory download started. Check your browser downloads.`);
+    } catch (error) {
+      logError("lot.download_failed", { error });
+      toast(customerErrorMessage(error, "The inventory download could not start. Allow downloads for this site and retry, or contact sales."), "error");
+    }
   }
 
   function onWhatsApp() {

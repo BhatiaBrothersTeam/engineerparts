@@ -9,6 +9,7 @@ import { IconTile } from "@/components/ui/IconTile";
 import { formatPrice } from "@/lib/utils";
 import type { CustomerAddress, CustomerEnquiry, CustomerOrder, CustomerOrderDetail } from "@/lib/account";
 import type { CartItem } from "@/lib/types";
+import { CustomerError, customerErrorMessage, customerRequest } from "@/lib/customer-feedback";
 
 const ICON_PROPS = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8 } as const;
 
@@ -46,7 +47,7 @@ export function OrdersView({ orders }: { orders: CustomerOrder[] }) {
             <p className="mt-2 text-sm text-steel-600">
               {formatDate(order.date)} &middot; {order.itemCount} {order.itemCount === 1 ? "item" : "items"} &middot; {formatPrice(order.total, order.currency)}
             </p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-steel-500">Payment: {order.paymentStatus}</p>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-steel-500">Payment: {order.paymentStatus === "pay-on-delivery" ? "Pay on delivery" : order.paymentStatus}</p>
           </div>
           <Link href={`/account/orders/${order.id}`} className="btn-outline btn-sm sm:justify-self-end">
             View details
@@ -178,15 +179,13 @@ function OrderAgainButton({ orderId }: { orderId: number }) {
   async function reorder() {
     setLoading(true);
     try {
-      const response = await fetch(`/api/account/orders/${orderId}/reorder`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-      const data = (await response.json()) as { items?: CartItem[]; error?: string };
-      if (!response.ok) throw new Error(data.error || "Unable to reorder.");
+      const data = await customerRequest<{ items?: CartItem[] }>(`/api/account/orders/${orderId}/reorder`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }, "We could not check this order's products. Try again shortly, or browse the catalog to add products manually.");
       for (const { quantity, ...item } of data.items ?? []) addItem(item, quantity);
-      if (!data.items?.length) throw new Error("No products from this order are currently available.");
+      if (!data.items?.length) throw new CustomerError("No products from this order are currently available. Browse the catalog for alternatives or contact sales.");
       toast("Available products added at current prices.");
       router.push("/cart");
     } catch (caught) {
-      toast(caught instanceof Error ? caught.message : "Unable to reorder.", "error");
+      toast(customerErrorMessage(caught, "Unable to reorder. Try again shortly or browse the catalog for available products."), "error");
       setLoading(false);
     }
   }

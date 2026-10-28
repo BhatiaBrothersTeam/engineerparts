@@ -1,18 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { isValidElement, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useToast } from "@/components/providers/ToastProvider";
 import { IconTile } from "@/components/ui/IconTile";
 import { CUSTOMER_TYPES, validPassword, type AccountCustomer, type CustomerAddress } from "@/lib/account";
 import type { WooCountry } from "@/lib/woocommerce";
+import { customerErrorMessage, customerRequest, validateCustomerFields } from "@/lib/customer-feedback";
 
 async function updateAccount(path: string, body: unknown, method: "PUT" | "POST" = "PUT") {
-  const response = await fetch(`/api/account${path}`, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  const data = (await response.json()) as { ok: boolean; error?: string; message?: string };
-  if (!response.ok) throw new Error(data.error || "Unable to save your changes.");
-  return data;
+  return customerRequest<{ ok: boolean; message?: string }>(`/api/account${path}`, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }, "Your changes could not be confirmed. Refresh to check the latest saved details, then retry or contact support.");
 }
 
 export function ProfileForm({ customer }: { customer: AccountCustomer }) {
@@ -29,12 +27,16 @@ export function ProfileForm({ customer }: { customer: AccountCustomer }) {
   const [error, setError] = useState("");
   const update = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
   async function submit(event: React.FormEvent) {
-    event.preventDefault(); setSaving(true); setError("");
+    event.preventDefault(); setError("");
+    const validation = validateCustomerFields([["First name", form.firstName, undefined, 60], ["Last name", form.lastName, undefined, 60], ["Email address", form.email, "email", 254]]);
+    if (validation) return setError(validation);
+    setSaving(true);
     try { const data = await updateAccount("", form); await refreshUser(); toast(data.message || "Profile updated."); router.refresh(); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to update your profile."); }
+    catch (caught) { setError(customerErrorMessage(caught, "Your profile update could not be confirmed. Refresh to review your saved details before trying again.")); }
     finally { setSaving(false); }
   }
   return <form onSubmit={submit} className="card space-y-6 p-5 sm:p-6">
+    <p className="text-xs text-steel-600">Fields marked * are required.</p>
     <div>
       <h3 className="text-h4 text-navy-950">Contact details</h3>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -68,8 +70,23 @@ export function AddressesForm({ customer, countries }: { customer: AccountCustom
   const [shipping, setShipping] = useState(customer.shippingAddress);
   const [same, setSame] = useState(JSON.stringify(customer.billingAddress) === JSON.stringify(customer.shippingAddress));
   const [saving, setSaving] = useState(false); const [error, setError] = useState("");
-  async function submit(event: React.FormEvent) { event.preventDefault(); setSaving(true); setError(""); try { const data = await updateAccount("/addresses", { billing, shipping, sameAsBilling: same }); toast(data.message || "Addresses updated."); router.refresh(); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to update addresses."); } finally { setSaving(false); } }
+  async function submit(event: React.FormEvent) {
+    event.preventDefault(); setError("");
+    for (const [label, address] of [["Billing", billing], ...(!same ? [["Shipping", shipping] as const] : [])] as const) {
+      const validation = validateCustomerFields([
+        [`${label} first name`, address.firstName], [`${label} last name`, address.lastName],
+        [`${label} street address`, address.address1], [`${label} city`, address.city], [`${label} country`, address.country],
+        ...(label === "Billing" ? [["Email address", address.email, "email"], ["Phone number", address.phone]] as const : []),
+      ]);
+      if (validation) return setError(validation);
+    }
+    setSaving(true);
+    try { const data = await updateAccount("/addresses", { billing, shipping, sameAsBilling: same }); toast(data.message || "Addresses updated."); router.refresh(); }
+    catch (caught) { setError(customerErrorMessage(caught, "Your address update could not be confirmed. Refresh to check your saved addresses, then retry.")); }
+    finally { setSaving(false); }
+  }
   return <form onSubmit={submit} className="space-y-5">
+    <p className="text-xs text-steel-600">Fields marked * are required.</p>
     <AddressPanel title="Billing address" value={billing} onChange={setBilling} countries={countries} billing />
     <label className="flex min-h-11 items-center gap-2.5 rounded-md border border-navy-100 bg-white px-4 py-3 text-sm font-semibold text-navy-800">
       <input type="checkbox" className="h-4 w-4 accent-brand-600" checked={same} onChange={(e) => setSame(e.target.checked)} />
@@ -85,7 +102,7 @@ export function SecurityForm({ activeSessionCount }: { activeSessionCount: numbe
   const router = useRouter(); const { toast } = useToast();
   const [currentPassword, setCurrent] = useState(""); const [newPassword, setNext] = useState(""); const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false); const [error, setError] = useState("");
-  async function submit(event: React.FormEvent) { event.preventDefault(); setError(""); if (!validPassword(newPassword)) return setError("New password must be at least 8 characters and contain letters and numbers."); if (newPassword !== confirm) return setError("Passwords do not match."); setSaving(true); try { await updateAccount("/security/password", { currentPassword, newPassword }); toast("Password changed. Please sign in again."); router.replace("/login"); router.refresh(); } catch (caught) { setError(caught instanceof Error ? caught.message : "Unable to change password."); setSaving(false); } }
+  async function submit(event: React.FormEvent) { event.preventDefault(); setError(""); if (!currentPassword) return setError("Enter your current password."); if (!validPassword(newPassword)) return setError("New password must be at least 8 characters and contain letters and numbers."); if (newPassword !== confirm) return setError("Passwords do not match. Re-enter the same new password in both fields."); setSaving(true); try { await updateAccount("/security/password", { currentPassword, newPassword }); toast("Password changed. Please sign in again."); router.replace("/login"); router.refresh(); } catch (caught) { setError(customerErrorMessage(caught, "Your password change could not be confirmed. Try signing in again or use Forgot password.")); setSaving(false); } }
   return <div className="space-y-5">
     <div className="card max-w-2xl p-5 sm:p-6">
       <div className="flex items-start gap-4">
@@ -103,6 +120,7 @@ export function SecurityForm({ activeSessionCount }: { activeSessionCount: numbe
       </div>
     </div>
     <form onSubmit={submit} className="card max-w-2xl space-y-4 p-5 sm:p-6">
+      <p className="text-xs text-steel-600">Fields marked * are required.</p>
       <h3 className="text-h4 text-navy-950">Change password</h3>
       <Field label="Current password"><input className="field" type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrent(e.target.value)} required /></Field>
       <Field label="New password"><input className="field" type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNext(e.target.value)} required /></Field>
@@ -120,5 +138,8 @@ function AddressPanel({ title, value, onChange, countries, billing = false }: { 
   return <section className="card p-5 sm:p-6"><h3 className="text-h4 text-navy-900">{title}</h3><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="First name"><input className="field" value={value.firstName} onChange={(e) => update("firstName", e.target.value)} required /></Field><Field label="Last name"><input className="field" value={value.lastName} onChange={(e) => update("lastName", e.target.value)} required /></Field><div className="sm:col-span-2"><Field label="Company"><input className="field" value={value.company} onChange={(e) => update("company", e.target.value)} /></Field></div><div className="sm:col-span-2"><Field label="Address line 1"><input className="field" value={value.address1} onChange={(e) => update("address1", e.target.value)} required /></Field></div><div className="sm:col-span-2"><Field label="Address line 2"><input className="field" value={value.address2} onChange={(e) => update("address2", e.target.value)} /></Field></div><Field label="City"><input className="field" value={value.city} onChange={(e) => update("city", e.target.value)} required /></Field><Field label="State / Emirate"><input className="field" value={value.state} onChange={(e) => update("state", e.target.value)} /></Field><Field label="Postal code"><input className="field" value={value.postalCode} onChange={(e) => update("postalCode", e.target.value)} /></Field><Field label="Country"><select className="field" value={value.country || "AE"} onChange={(e) => update("country", e.target.value)} required>{countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}</select></Field>{billing ? <><Field label="Email"><input className="field" type="email" value={value.email} onChange={(e) => update("email", e.target.value)} required /></Field><Field label="Phone"><input className="field" type="tel" value={value.phone} onChange={(e) => update("phone", e.target.value)} required /></Field></> : null}</div></section>;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="field-label">{label}</span>{children}</label>; }
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const required = isValidElement<{ required?: boolean }>(children) && children.props.required;
+  return <label className="block"><span className="field-label">{label}{required ? <span className="text-signal-600"> *</span> : null}</span>{children}</label>;
+}
 function FormError({ message }: { message: string }) { return message ? <p role="alert" className="mt-4 rounded-md border border-signal-200 bg-signal-50 px-4 py-3 text-sm font-semibold text-signal-700">{message}</p> : null; }

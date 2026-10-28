@@ -8,11 +8,12 @@ import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import { IconTile } from "@/components/ui/IconTile";
 import { track } from "@/lib/analytics";
 import { logError } from "@/lib/logger";
-import { CONTACT_EMAIL, CONTACT_PHONE, formatPrice, isPlausibleAddress, isValidInternationalPhone, normalizePhone } from "@/lib/utils";
+import { CONTACT_EMAIL, CONTACT_PHONE, formatPrice, isPlausibleAddress, normalizePhone } from "@/lib/utils";
 import type { WooCountry } from "@/lib/woocommerce";
 import type { AccountCustomer, CustomerAddress } from "@/lib/account";
+import { customerErrorMessage, customerRequest, customerResponseMessage, validateCustomerFields } from "@/lib/customer-feedback";
 
-const ORDER_SUBMISSION_ERROR = "We could not submit your order. Please try again or contact our sales team.";
+const ORDER_SUBMISSION_ERROR = "We could not confirm your order. Check your orders or contact sales before retrying to avoid placing a duplicate order.";
 const CHECKOUT_REFERENCE_STORAGE_KEY = "engineerparts.checkout.reference";
 
 interface CheckoutAddress {
@@ -39,7 +40,7 @@ interface CheckoutState {
 
 type CheckoutStep = 1 | 2 | 3;
 type PurchaseType = "individual" | "business";
-type PaymentMethod = "nomod";
+type PaymentMethod = "nomod" | "cod";
 
 const EMPTY_ADDRESS: CheckoutAddress = {
   firstName: "",
@@ -78,8 +79,7 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
   useEffect(() => {
     if (!authenticated) return;
     const controller = new AbortController();
-    fetch("/api/account", { cache: "no-store", signal: controller.signal })
-      .then(async (response) => response.ok ? (await response.json()) as { customer: AccountCustomer } : null)
+    customerRequest<{ customer: AccountCustomer }>("/api/account", { cache: "no-store", signal: controller.signal }, "Saved details could not be loaded. Enter your contact and delivery details manually, or refresh to try again.")
       .then((data) => {
         if (!data || edited.current) return;
         const billing = checkoutBilling(data.customer.billingAddress, data.customer);
@@ -91,11 +91,16 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
         setPurchaseType(billing.company ? "business" : "individual");
         setQuoteCountry((sameAsBilling ? billing.country : shipping.country) || "AE");
       })
-      .catch(() => undefined);
+      .catch((error) => {
+        if (!controller.signal.aborted) setError(customerErrorMessage(error, "Saved details could not be loaded. Enter your details manually, or refresh to try again."));
+      });
     return () => controller.abort();
   }, [authenticated, setQuoteCountry]);
 
   const currency = items[0]?.currency ?? "";
+  const deliveryCountry = form.sameAsBilling ? form.billing.country : form.shipping.country;
+  const codAvailable = deliveryCountry === "AE";
+  const selectedPaymentMethod = codAvailable ? paymentMethod : "nomod";
 
   function updateAddress<K extends keyof CheckoutState["billing"]>(key: K, value: CheckoutState["billing"][K]) {
     edited.current = true;
@@ -122,35 +127,38 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
   }
 
   function validateDetails(): boolean {
-    if (
-      form.billing.firstName.trim().length < 2 ||
-      form.billing.lastName.trim().length < 2 ||
-      !form.billing.email.trim() ||
-      !form.billing.phone.trim() ||
-      (purchaseType === "business" && !form.billing.company.trim())
-    ) {
-      setError("Please complete your contact details.");
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.billing.email.trim())) {
-      setError("Please enter a valid email address.");
-      return false;
-    }
-    if (!isValidInternationalPhone(form.billing.phone)) {
-      setError("Enter a valid phone number with its country code, such as +971501234567.");
+    const validation = validateCustomerFields([
+      ["First name", form.billing.firstName], ["Last name", form.billing.lastName],
+      ["Email address", form.billing.email, "email"], ["Phone number", form.billing.phone, "phone"],
+      ...(purchaseType === "business" ? [["Company name", form.billing.company] as const] : []),
+    ]);
+    if (validation) {
+      setError(validation);
       return false;
     }
     return true;
   }
 
   function validateDelivery(): boolean {
-    if (!isPlausibleAddress(form.billing.address1) || form.billing.city.trim().length < 2) {
-      setError("Please enter a valid billing and delivery street address and city.");
+    if (!isPlausibleAddress(form.billing.address1)) {
+      setError("Enter a billing street address of at least 5 characters, including the street or building name.");
       return false;
     }
-    if (!form.sameAsBilling && (!isPlausibleAddress(form.shipping.address1) || form.shipping.city.trim().length < 2)) {
-      setError("Please enter a valid shipping street address and city.");
+    if (form.billing.city.trim().length < 2) {
+      setError("Enter your billing city using at least 2 characters.");
       return false;
+    }
+    if (!form.sameAsBilling) {
+      if (!isPlausibleAddress(form.shipping.address1)) {
+        setError("Enter a shipping street address of at least 5 characters, including the street or building name.");
+        return false;
+      }
+      if (form.shipping.city.trim().length < 2) {
+        setError("Enter your shipping city using at least 2 characters.");
+        return false;
+      }
+      const validation = validateCustomerFields([["Shipping first name", form.shipping.firstName], ["Shipping last name", form.shipping.lastName]]);
+      if (validation) { setError(validation); return false; }
     }
     return true;
   }
@@ -229,6 +237,7 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
       items: items.map(({ productId, quantity }) => ({ productId, quantity })),
       saveAddress: authenticated && form.saveAddress,
       acceptPolicies: form.acceptPolicies,
+      paymentMethod: selectedPaymentMethod,
       trn: purchaseType === "business" ? form.trn.trim() : "",
       customer_note: form.customerNote.trim(),
     };
@@ -242,11 +251,8 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
       const result = (await response.json().catch(() => null)) as { error?: string; code?: string; payment_url?: string; order_number?: string } | null;
       if (!response.ok || !result?.payment_url) {
         logError("checkout_submit_rejected", { status: response.status, code: result?.code, message: result?.error });
-        if (result?.code === "shipping_option_required") {
-          setError(result.error ?? "WooCommerce could not select a shipping method for this address. Check the shipping methods in WooCommerce → Settings → Shipping.");
-        } else if (result?.code === "insufficient_stock") {
+        if (result?.code === "insufficient_stock") {
           refreshQuote();
-          setError(result.error ?? "Sorry, this product is no longer available in the requested quantity. Please update your cart and try again.");
         } else if (result?.code === "checkout_attempt_closed") {
           orderReference.current = null;
           try {
@@ -254,29 +260,15 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
           } catch {
             // Keep checkout available when the browser blocks session storage.
           }
-          setError(result.error ?? "This payment attempt has ended. Please submit checkout again to start a new attempt.");
-        } else if (result?.code === "checkout_request_conflict") {
-          setError(result.error ?? "This checkout already created an order. Return to that order before changing its details.");
-        } else if (result?.code === "checkout_proxy_not_deployed") {
-          setError(result.error ?? "The WordPress checkout endpoint is not active. Please contact support.");
-        } else if (response.status === 409 && result?.error) {
-          setError(result.error);
-        } else if (result?.code === "payment_handoff_failed") {
-          setError(result.error ?? "Your order was created, but secure payment could not be started. Please contact support before placing another order.");
-        } else if (result?.code === "payment_gateway_failed") {
-          setError(result.error ?? "Nomod could not start the payment. Check WooCommerce → Orders before retrying.");
-        } else if (result?.code === "invalid_checkout_address") {
-          setError(result.error ?? "WooCommerce rejected the billing or delivery address. Check the country, state/province, postal code, and phone formats.");
-        } else {
-          setError(ORDER_SUBMISSION_ERROR);
         }
+        setError(customerResponseMessage(response.status, result, ORDER_SUBMISSION_ERROR));
         setState("idle");
         return;
       }
       window.location.assign(result.payment_url);
     } catch (error) {
       logError("checkout_submit_failed", { error });
-      setError(ORDER_SUBMISSION_ERROR);
+      setError(customerErrorMessage(error, ORDER_SUBMISSION_ERROR));
       setState("idle");
     }
   }
@@ -289,9 +281,11 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
         <IconTile>
           <span className="block h-5 w-5 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" aria-hidden="true" />
         </IconTile>
-        <h1 className="text-h1 mt-5 text-navy-900">Preparing your secure payment</h1>
+        <h1 className="text-h1 mt-5 text-navy-900">{selectedPaymentMethod === "cod" ? "Placing your Cash on Delivery order" : "Preparing your secure payment"}</h1>
         <p className="mt-3 text-sm leading-relaxed text-steel-600">
-          Your order is being submitted. We’ll redirect you to Nomod shortly. Please don’t refresh or close this page.
+          {selectedPaymentMethod === "cod"
+            ? "Your order is being submitted. Your order confirmation will appear shortly. Pay cash when your order arrives. Please don’t refresh or close this page."
+            : "Your order is being submitted. We’ll redirect you to Nomod shortly. Please don’t refresh or close this page."}
         </p>
       </div>
     );
@@ -312,6 +306,7 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
   return (
     <form onSubmit={onSubmit} className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)]">
       <div className="min-w-0 space-y-6">
+        <p className="text-xs text-steel-600">Fields marked * are required.</p>
         {!authLoading && !authenticated ? <div className="rounded-md border border-navy-200 bg-navy-50 px-4 py-3 text-sm text-navy-800"><Link href="/login?redirect=/checkout" className="font-bold text-brand-700">Sign in</Link> to prefill saved details, or continue with guest checkout. New customer? <Link href="/register" className="font-bold text-brand-700">Create an account</Link>.</div> : null}
         <div className="flex items-start gap-3 rounded-md border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-navy-800">
           <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700" aria-hidden="true">
@@ -319,7 +314,7 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
           </span>
           <div>
             <p className="font-bold">This places a real order</p>
-            <p className="mt-1 text-xs leading-relaxed text-steel-700">Submitting creates an order and starts secure payment. Final prices, shipping, tax and stock are confirmed by the store.</p>
+            <p className="mt-1 text-xs leading-relaxed text-steel-700">Submitting creates an order using your selected payment method. Final prices, shipping, tax and stock are confirmed by the store.</p>
           </div>
         </div>
         <ol aria-label="Checkout steps" className="card flex items-stretch gap-1 p-2 sm:gap-2 sm:p-3">
@@ -370,25 +365,25 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="field-label">First name *</span>
-                <input autoComplete="given-name" minLength={2} className="field" value={form.billing.firstName} onChange={(event) => updateAddress("firstName", event.target.value)} />
+                <input autoComplete="given-name" minLength={1} className="field" value={form.billing.firstName} onChange={(event) => updateAddress("firstName", event.target.value)} required />
               </label>
               <label className="block">
                 <span className="field-label">Last name *</span>
-                <input autoComplete="family-name" minLength={2} className="field" value={form.billing.lastName} onChange={(event) => updateAddress("lastName", event.target.value)} />
+                <input autoComplete="family-name" minLength={1} className="field" value={form.billing.lastName} onChange={(event) => updateAddress("lastName", event.target.value)} required />
               </label>
               <label className="block">
                 <span className="field-label">Email address *</span>
-                <input type="email" autoComplete="email" className="field" value={form.billing.email} onChange={(event) => updateAddress("email", event.target.value)} />
+                <input type="email" autoComplete="email" className="field" value={form.billing.email} onChange={(event) => updateAddress("email", event.target.value)} required />
               </label>
               <label className="block">
                 <span className="field-label">Phone number *</span>
-                <input type="tel" autoComplete="tel" inputMode="tel" className="field" value={form.billing.phone} onChange={(event) => updateAddress("phone", event.target.value)} placeholder="+971 50 123 4567" />
+                <input type="tel" autoComplete="tel" inputMode="tel" className="field" value={form.billing.phone} onChange={(event) => updateAddress("phone", event.target.value)} placeholder="+971 50 123 4567" required />
               </label>
               {purchaseType === "business" ? (
                 <>
                   <label className="block sm:col-span-2">
                     <span className="field-label">Company name *</span>
-                    <input autoComplete="organization" className="field" value={form.billing.company} onChange={(event) => updateAddress("company", event.target.value)} />
+                    <input autoComplete="organization" className="field" value={form.billing.company} onChange={(event) => updateAddress("company", event.target.value)} required />
                   </label>
                   <label className="block sm:col-span-2">
                     <span className="field-label">Tax registration number (optional)</span>
@@ -469,14 +464,15 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
                 <IconTile>
                   <CardIcon />
                 </IconTile>
-                <h2 id="review-payment-heading" className="text-h3 text-navy-900">Payment method</h2>
+                <h2 id="review-payment-heading" className="text-h3 text-navy-900">Payment method *</h2>
               </div>
-              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-md border border-brand-300 bg-brand-50 px-4 py-4">
+              <label className={`mt-4 flex cursor-pointer items-start gap-3 rounded-md border px-4 py-4 ${selectedPaymentMethod === "nomod" ? "border-brand-300 bg-brand-50" : "border-navy-200"}`}>
                 <input
                   type="radio"
                   name="payment-method"
                   value="nomod"
-                  checked={paymentMethod === "nomod"}
+                  required
+                  checked={selectedPaymentMethod === "nomod"}
                   onChange={() => setPaymentMethod("nomod")}
                   className="mt-1 h-4 w-4 shrink-0 accent-brand-600"
                 />
@@ -490,6 +486,15 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
                   </span>
                 </span>
               </label>
+              {codAvailable ? (
+                <label className={`mt-3 flex cursor-pointer items-start gap-3 rounded-md border px-4 py-4 ${selectedPaymentMethod === "cod" ? "border-brand-300 bg-brand-50" : "border-navy-200"}`}>
+                  <input type="radio" name="payment-method" value="cod" checked={selectedPaymentMethod === "cod"} onChange={() => setPaymentMethod("cod")} className="mt-1 h-4 w-4 shrink-0 accent-brand-600" required />
+                  <span>
+                    <span className="block text-sm font-semibold text-navy-900">Cash on Delivery</span>
+                    <span className="mt-1 block text-xs text-steel-600">Pay in cash when your order arrives. Available for UAE delivery addresses, with no additional Cash on Delivery fee.</span>
+                  </span>
+                </label>
+              ) : <p className="mt-3 text-xs text-steel-600">Cash on Delivery is available for UAE delivery addresses only. Online payment is available for your selected destination.</p>}
             </section>
             <section aria-labelledby="review-order-heading" className="mt-6">
               <div className="flex items-center gap-3">
@@ -538,14 +543,15 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
                 type="checkbox"
                 className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
                 checked={form.acceptPolicies}
+                required
                 onChange={(event) => setForm((current) => ({ ...current, acceptPolicies: event.target.checked }))}
               />
-              <span>I agree to the <Link href="/terms" className="font-semibold text-brand-700 underline">Terms &amp; Conditions</Link> and acknowledge the <Link href="/privacy-policy" className="font-semibold text-brand-700 underline">Privacy Policy</Link>.</span>
+              <span>I agree to the <Link href="/terms" className="font-semibold text-brand-700 underline">Terms &amp; Conditions</Link> and acknowledge the <Link href="/privacy-policy" className="font-semibold text-brand-700 underline">Privacy Policy</Link>. <span className="text-signal-600">*</span></span>
             </label>
             <div className="mt-6 flex items-center justify-between gap-3">
               <button type="button" onClick={() => { setError(null); setStep(2); }} className="text-sm font-semibold text-brand-700 underline">Back</button>
               <button type="submit" disabled={!stockValid} className="btn-primary">
-                Place order
+                {selectedPaymentMethod === "cod" ? "Place Cash on Delivery order" : "Place order and pay online"}
               </button>
             </div>
           </section>
@@ -610,7 +616,7 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
             Add {formatPrice(freeShippingRemaining, currency)} more to unlock {freeShippingLabel ?? "free shipping"}.
           </p>
         ) : null}
-        {quoteError ? <p className="mt-3 text-xs font-semibold text-signal-700">Shipping and tax totals are temporarily unavailable. Product subtotal is shown.</p> : null}
+        {quoteError ? <div role="alert" className="mt-3 text-xs font-semibold text-signal-700"><p>Shipping, tax and stock could not be checked. Only the product subtotal is shown. Check your connection and retry, or contact sales.</p><button type="button" onClick={refreshQuote} className="mt-2 underline">Retry totals and stock check</button></div> : null}
         {!stockValid ? <p role="status" className="mt-4 text-xs font-semibold text-signal-700">{quoteLoading ? "Checking current stock..." : quoteError ? "Could not verify current stock. Please reload and try again." : "Update your cart to match current stock before checkout."}</p> : null}
         <section className="mt-4 border-t border-navy-100 pt-4 text-xs text-steel-600" aria-label="Checkout support">
           <p className="font-semibold text-navy-800">Need help with your order?</p>
@@ -642,11 +648,11 @@ function AddressFields({
         <>
           <label className="block">
             <span className="field-label">First name *</span>
-            <input autoComplete="given-name" minLength={2} className="field" value={address.firstName} onChange={(event) => onChange("firstName", event.target.value)} required />
+            <input autoComplete="given-name" minLength={1} className="field" value={address.firstName} onChange={(event) => onChange("firstName", event.target.value)} required />
           </label>
           <label className="block">
             <span className="field-label">Last name *</span>
-            <input autoComplete="family-name" minLength={2} className="field" value={address.lastName} onChange={(event) => onChange("lastName", event.target.value)} required />
+            <input autoComplete="family-name" minLength={1} className="field" value={address.lastName} onChange={(event) => onChange("lastName", event.target.value)} required />
           </label>
           <label className="block sm:col-span-2">
             <span className="field-label">Company name (optional)</span>

@@ -43,7 +43,7 @@ export interface CustomerOrder {
   status: string;
   total: number;
   currency: string;
-  paymentStatus: "paid" | "unpaid" | "not-required";
+  paymentStatus: "paid" | "unpaid" | "not-required" | "pay-on-delivery";
   itemCount: number;
   canPay: boolean;
   canReorder: boolean;

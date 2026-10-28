@@ -22,7 +22,7 @@ export default async function AccountPage() {
   const TILES = [
     {
       title: "Orders",
-      copy: orders.length ? `${orders.length} ${orders.length === 1 ? "order" : "orders"} on your account.` : "You have not placed any orders yet.",
+      copy: !orderData ? "Orders could not be loaded. Open order history to retry, or contact support." : orders.length ? `${orders.length} ${orders.length === 1 ? "order" : "orders"} on your account.` : "You have not placed any orders yet.",
       href: "/account/orders",
       icon: (
         <svg className="h-5 w-5" {...ICON_PROPS}>
@@ -33,7 +33,7 @@ export default async function AccountPage() {
     },
     {
       title: "Enquiries / RFQs",
-      copy: enquiries.length ? `${enquiries.length} submitted ${enquiries.length === 1 ? "enquiry" : "enquiries"}.` : "You have not submitted any enquiries yet.",
+      copy: !enquiryData ? "Enquiries could not be loaded. Open your enquiries to retry, or contact support." : enquiries.length ? `${enquiries.length} submitted ${enquiries.length === 1 ? "enquiry" : "enquiries"}.` : "You have not submitted any enquiries yet.",
       href: "/account/enquiries",
       icon: (
         <svg className="h-5 w-5" {...ICON_PROPS}>

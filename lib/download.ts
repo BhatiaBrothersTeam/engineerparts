@@ -1,4 +1,5 @@
 import { track } from "@/lib/analytics";
+import { CustomerError } from "@/lib/customer-feedback";
 
 function triggerDownload(filename: string, mime: string, content: string) {
   const blob = new Blob([content], { type: mime });
@@ -7,9 +8,12 @@ function triggerDownload(filename: string, mime: string, content: string) {
   anchor.href = url;
   anchor.download = filename;
   document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  URL.revokeObjectURL(url);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }
 }
 
 function csvEscape(value: string | number): string {
@@ -26,7 +30,7 @@ export function downloadCsv(
   rows: DownloadRow[],
   meta: { reference: string; source: string },
 ) {
-  if (!rows.length) return;
+  if (!rows.length) throw new CustomerError("This listing has no inventory rows to download. Contact sales and quote the listing reference.");
   const headers = Object.keys(rows[0]);
   const lines = [
     headers.join(","),
