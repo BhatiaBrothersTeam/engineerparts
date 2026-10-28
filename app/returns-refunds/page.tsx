@@ -52,12 +52,14 @@ export default function ReturnsRefundsPage() {
         tone="light"
       />
       <PolicyLayout current="/returns-refunds">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3 sm:gap-5">
             {HIGHLIGHTS.map((item) => (
-              <div key={item.title} className="card p-4">
+              <div key={item.title} className="card flex gap-4 p-4 sm:block sm:p-5">
                 <IconTile>{item.icon}</IconTile>
-                <h2 className="text-h4 mt-3 text-navy-900">{item.title}</h2>
-                <p className="mt-1 text-sm leading-relaxed text-steel-600">{item.copy}</p>
+                <div className="min-w-0">
+                  <h2 className="text-h4 text-navy-900 sm:mt-3">{item.title}</h2>
+                  <p className="mt-1 text-sm leading-relaxed text-steel-600">{item.copy}</p>
+                </div>
               </div>
             ))}
           </div>

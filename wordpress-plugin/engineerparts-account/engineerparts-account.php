@@ -2,7 +2,7 @@
 /**
  * Plugin Name: EngineerParts Customer Accounts
  * Description: Secure customer authentication endpoints for the EngineerParts storefront.
- * Version: 1.8.5
+ * Version: 1.9.0
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
  */
@@ -152,6 +152,9 @@ final class EngineerParts_Customer_Accounts {
         if (self::install_clearance_alerts_table()) {
             update_option('engineerparts_clearance_alerts_db_version', '1.0.0');
         }
+        if (self::install_logs_table()) {
+            update_option('engineerparts_logs_db_version', '1.0.0');
+        }
 
         if (!wp_next_scheduled('engineerparts_purge_sessions')) {
             wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'engineerparts_purge_sessions');
@@ -187,6 +190,7 @@ final class EngineerParts_Customer_Accounts {
         self::route('/account/saved-products', 'POST', 'toggle_saved_product');
         self::route('/enquiries', 'POST', 'submit_enquiry');
         self::route('/clearance-alerts', 'POST', 'subscribe_clearance_alerts');
+        self::route('/logs', 'POST', 'store_logs');
     }
 
     public static function maybe_install_enquiries_table(): void {
@@ -217,6 +221,36 @@ final class EngineerParts_Customer_Accounts {
                 'category' => 'table_install_failed',
             )));
         }
+        if (get_option('engineerparts_logs_db_version') !== '1.0.0' && self::install_logs_table()) {
+            update_option('engineerparts_logs_db_version', '1.0.0');
+        } elseif (get_option('engineerparts_logs_db_version') !== '1.0.0') {
+            error_log(wp_json_encode(array(
+                'timestamp' => gmdate(DATE_ATOM),
+                'endpoint' => 'logs',
+                'category' => 'table_install_failed',
+            )));
+        }
+    }
+
+    private static function install_logs_table(): bool {
+        global $wpdb;
+        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+        $table = self::logs_table();
+        $charset = $wpdb->get_charset_collate();
+        dbDelta("CREATE TABLE {$table} (
+            id bigint unsigned NOT NULL AUTO_INCREMENT,
+            level varchar(10) NOT NULL DEFAULT 'info',
+            event varchar(191) NOT NULL DEFAULT '',
+            source varchar(10) NOT NULL DEFAULT 'server',
+            context longtext NOT NULL,
+            logged_at datetime NOT NULL,
+            created_at datetime NOT NULL,
+            PRIMARY KEY  (id),
+            KEY level (level),
+            KEY event (event),
+            KEY logged_at (logged_at)
+        ) {$charset};");
+        return $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($table))) === $table;
     }
 
     public static function register_legacy_enquiry_type(): void {
@@ -450,6 +484,98 @@ final class EngineerParts_Customer_Accounts {
             'engineerparts-enquiries',
             array(self::class, 'render_enquiries_admin_page')
         );
+        add_submenu_page(
+            'woocommerce',
+            'EngineerParts Logs',
+            'EngineerParts Logs',
+            'manage_woocommerce',
+            'engineerparts-logs',
+            array(self::class, 'render_logs_admin_page')
+        );
+    }
+
+    public static function render_logs_admin_page(): void {
+        if (!current_user_can('manage_woocommerce')) {
+            wp_die(esc_html__('You do not have permission to view logs.', 'engineerparts'));
+        }
+        global $wpdb;
+        $table = self::logs_table();
+        $level = isset($_GET['level']) ? sanitize_key(wp_unslash($_GET['level'])) : '';
+        $source = isset($_GET['source']) ? sanitize_key(wp_unslash($_GET['source'])) : '';
+        $event = isset($_GET['event']) ? sanitize_text_field(wp_unslash($_GET['event'])) : '';
+        $page = max(1, absint($_GET['paged'] ?? 1));
+        $per_page = 50;
+
+        $where = array('1=1');
+        $args = array();
+        if (in_array($level, array('debug', 'info', 'warn', 'error'), true)) {
+            $where[] = 'level = %s';
+            $args[] = $level;
+        }
+        if (in_array($source, array('server', 'client'), true)) {
+            $where[] = 'source = %s';
+            $args[] = $source;
+        }
+        if ($event !== '') {
+            $where[] = 'event LIKE %s';
+            $args[] = '%' . $wpdb->esc_like($event) . '%';
+        }
+        $where_sql = implode(' AND ', $where);
+        $count_sql = "SELECT COUNT(*) FROM {$table} WHERE {$where_sql}";
+        $total = (int) $wpdb->get_var($args ? $wpdb->prepare($count_sql, $args) : $count_sql);
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table} WHERE {$where_sql} ORDER BY logged_at DESC, id DESC LIMIT %d OFFSET %d",
+            array_merge($args, array($per_page, ($page - 1) * $per_page))
+        ), ARRAY_A);
+
+        $colors = array('error' => '#b32d2e', 'warn' => '#996800', 'info' => '#2271b1', 'debug' => '#646970');
+        echo '<div class="wrap"><h1>EngineerParts Logs</h1>';
+        echo '<p>Application logs from the storefront (server and browser). Entries older than '
+            . esc_html((string) max(1, (int) apply_filters('engineerparts_log_retention_days', 30)))
+            . ' days are removed automatically.</p>';
+        echo '<form method="get" style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">';
+        echo '<input type="hidden" name="page" value="engineerparts-logs" />';
+        echo '<select name="level"><option value="">All levels</option>';
+        foreach (array('error', 'warn', 'info', 'debug') as $option) {
+            echo '<option value="' . esc_attr($option) . '"' . selected($level, $option, false) . '>' . esc_html(ucfirst($option)) . '</option>';
+        }
+        echo '</select><select name="source"><option value="">All sources</option>';
+        foreach (array('server', 'client') as $option) {
+            echo '<option value="' . esc_attr($option) . '"' . selected($source, $option, false) . '>' . esc_html(ucfirst($option)) . '</option>';
+        }
+        echo '</select><input type="search" name="event" placeholder="Event contains…" value="' . esc_attr($event) . '" />';
+        submit_button('Filter', 'secondary', '', false);
+        echo '</form>';
+
+        echo '<table class="widefat striped"><thead><tr><th style="width:170px">Time (UTC)</th><th style="width:70px">Level</th><th style="width:70px">Source</th><th>Event</th><th>Details</th></tr></thead><tbody>';
+        if (!$rows) {
+            echo '<tr><td colspan="5">No log entries found.</td></tr>';
+        }
+        foreach ($rows ?: array() as $row) {
+            $decoded = json_decode((string) $row['context'], true);
+            $pretty = is_array($decoded) && $decoded ? wp_json_encode($decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : '';
+            echo '<tr>';
+            echo '<td>' . esc_html($row['logged_at']) . '</td>';
+            echo '<td><strong style="color:' . esc_attr($colors[$row['level']] ?? '#1d2327') . '">' . esc_html(strtoupper($row['level'])) . '</strong></td>';
+            echo '<td>' . esc_html($row['source']) . '</td>';
+            echo '<td><code>' . esc_html($row['event']) . '</code></td>';
+            echo '<td>' . ($pretty !== ''
+                ? '<details><summary>View</summary><pre style="white-space:pre-wrap;max-width:720px">' . esc_html($pretty) . '</pre></details>'
+                : '&mdash;') . '</td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+
+        $pages = (int) ceil($total / $per_page);
+        if ($pages > 1) {
+            echo '<div class="tablenav"><div class="tablenav-pages">' . paginate_links(array(
+                'base' => add_query_arg('paged', '%#%'),
+                'format' => '',
+                'current' => $page,
+                'total' => $pages,
+            )) . '</div></div>';
+        }
+        echo '</div>';
     }
 
     public static function render_enquiries_admin_page(): void {
@@ -1744,6 +1870,85 @@ final class EngineerParts_Customer_Accounts {
     public static function purge_sessions(): void {
         global $wpdb;
         $wpdb->query($wpdb->prepare('DELETE FROM ' . self::session_table() . ' WHERE expires_at < %s', current_time('mysql', true)));
+        self::purge_logs();
+    }
+
+    /**
+     * Stores a batch of application log entries sent by the Next.js server logger.
+     * Body: { entries: [{ level, event, source, timestamp, context }], dropped?: int }.
+     */
+    public static function store_logs(WP_REST_Request $request): WP_REST_Response {
+        global $wpdb;
+        $data = self::json($request);
+        $entries = is_array($data['entries'] ?? null) ? array_slice($data['entries'], 0, 50) : array();
+        $dropped = max(0, (int) ($data['dropped'] ?? 0));
+        $now = current_time('mysql', true);
+
+        $rows = array();
+        foreach ($entries as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $level = in_array($entry['level'] ?? '', array('debug', 'info', 'warn', 'error'), true) ? $entry['level'] : '';
+            $event = substr(preg_replace('/[^A-Za-z0-9_.:\-]/', '_', (string) ($entry['event'] ?? '')), 0, 191);
+            if ($level === '' || $event === '') {
+                continue;
+            }
+            $timestamp = is_string($entry['timestamp'] ?? null) ? strtotime($entry['timestamp']) : false;
+            $context = wp_json_encode(is_array($entry['context'] ?? null) ? $entry['context'] : new stdClass());
+            $rows[] = array(
+                $level,
+                $event,
+                ($entry['source'] ?? '') === 'client' ? 'client' : 'server',
+                substr($context === false ? '{}' : $context, 0, 20000),
+                $timestamp ? gmdate('Y-m-d H:i:s', $timestamp) : $now,
+                $now,
+            );
+        }
+        if ($dropped > 0) {
+            $rows[] = array('warn', 'log_entries_dropped', 'server', wp_json_encode(array('count' => $dropped)), $now, $now);
+        }
+        if (!$rows) {
+            return self::error('No valid log entries.', 400, 'invalid_log_entries');
+        }
+
+        $placeholders = array();
+        $values = array();
+        foreach ($rows as $row) {
+            $placeholders[] = '(%s, %s, %s, %s, %s, %s)';
+            array_push($values, ...$row);
+        }
+        $saved = $wpdb->query($wpdb->prepare(
+            'INSERT INTO ' . self::logs_table() . ' (level, event, source, context, logged_at, created_at) VALUES ' . implode(', ', $placeholders),
+            $values
+        ));
+        if ($saved === false) {
+            error_log(wp_json_encode(array(
+                'timestamp' => gmdate(DATE_ATOM),
+                'endpoint' => 'logs',
+                'category' => 'log_save_failed',
+                'databaseError' => $wpdb->last_error,
+            )));
+            return self::error('Unable to store log entries.', 502, 'log_save_failed');
+        }
+        return self::success(array('stored' => count($rows)), 201);
+    }
+
+    /** Deletes log entries older than the retention window (default 30 days). */
+    private static function purge_logs(): void {
+        global $wpdb;
+        $days = max(1, (int) apply_filters('engineerparts_log_retention_days', 30));
+        $cutoff = gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS);
+        // Delete in chunks so a large backlog does not lock the table for long.
+        for ($i = 0; $i < 20; $i++) {
+            $deleted = $wpdb->query($wpdb->prepare(
+                'DELETE FROM ' . self::logs_table() . ' WHERE logged_at < %s LIMIT 5000',
+                $cutoff
+            ));
+            if (!$deleted) {
+                break;
+            }
+        }
     }
 
     private static function authenticated_user_id(WP_REST_Request $request): int {
@@ -2101,6 +2306,11 @@ final class EngineerParts_Customer_Accounts {
     private static function clearance_alerts_table(): string {
         global $wpdb;
         return $wpdb->prefix . 'engineerparts_clearance_alerts';
+    }
+
+    private static function logs_table(): string {
+        global $wpdb;
+        return $wpdb->prefix . 'engineerparts_logs';
     }
 
     private static function verify_turnstile(string $token): ?WP_REST_Response {

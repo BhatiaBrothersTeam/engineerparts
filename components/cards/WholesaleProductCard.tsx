@@ -6,21 +6,23 @@ import { ConditionPill, ListingBadges, StatusPill } from "@/components/ui/Badge"
 import { useEnquiry } from "@/components/providers/EnquiryProvider";
 import { track } from "@/lib/analytics";
 import type { Product } from "@/lib/types";
-import { absoluteUrl, formatNumber, productWhatsAppMessage, relativeAdded, whatsappLink } from "@/lib/utils";
+import { absoluteUrl, formatNumber, openWhatsApp, productWhatsAppMessage, relativeAdded } from "@/lib/utils";
 
 export function WholesaleProductCard({ product }: { product: Product }) {
   const { openEnquiry } = useEnquiry();
 
-  const listingUrl = absoluteUrl(`/product/${product.slug}`);
-  const message = productWhatsAppMessage({
-    name: product.name,
-    sku: product.sku,
-    part_number: product.part_number,
-    url: listingUrl,
-  });
-
   function onWhatsApp() {
     track("whatsapp_click", { source: "WholesaleProductCard", sku: product.sku });
+    openWhatsApp(
+      productWhatsAppMessage({
+        name: product.name,
+        sku: product.sku,
+        part_number: product.part_number,
+        brand: product.brand,
+        wholesale: true,
+        url: absoluteUrl(`/product/${product.slug}`),
+      }),
+    );
   }
 
   function onEnquire() {
@@ -97,15 +99,14 @@ export function WholesaleProductCard({ product }: { product: Product }) {
           </div>
 
           <div className="product-card-actions">
-            <a
-              href={whatsappLink(message)}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
               onClick={onWhatsApp}
               className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700"
+              aria-label={`Ask for wholesale pricing on ${product.name} via WhatsApp`}
             >
               WhatsApp
-            </a>
+            </button>
             <button type="button" onClick={onEnquire} className="btn-outline btn-sm">
               Enquire Now
             </button>

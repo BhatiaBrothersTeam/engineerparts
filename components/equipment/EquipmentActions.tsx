@@ -8,7 +8,7 @@ import {
   equipmentWhatsAppMessage,
   formatNumber,
   formatPrice,
-  whatsappLink,
+  openWhatsApp,
 } from "@/lib/utils";
 
 export function EquipmentActions({ unit }: { unit: Equipment }) {
@@ -16,17 +16,13 @@ export function EquipmentActions({ unit }: { unit: Equipment }) {
 
   function onWhatsApp() {
     track("whatsapp_click", { source: "Equipment page", reference: unit.reference });
-    window.open(
-      whatsappLink(
-        equipmentWhatsAppMessage({
-          name: unit.name,
-          reference: unit.reference,
-          serial_number: unit.serial_number,
-          url: absoluteUrl(`/equipment/${unit.slug}`),
-        }),
-      ),
-      "_blank",
-      "noopener",
+    openWhatsApp(
+      equipmentWhatsAppMessage({
+        name: unit.name,
+        reference: unit.reference,
+        serial_number: unit.serial_number,
+        url: absoluteUrl(`/equipment/${unit.slug}`),
+      }),
     );
   }
 

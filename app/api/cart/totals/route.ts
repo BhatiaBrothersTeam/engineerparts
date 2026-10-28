@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logError } from "@/lib/logger";
 import { getWooCommerceCartQuote } from "@/lib/woocommerce";
 
 export const runtime = "nodejs";
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     }
     return NextResponse.json(await getWooCommerceCartQuote(payload.items, payload.country));
   } catch (error) {
-    console.error("Cart total calculation failed", error);
+    logError("cart_totals_failed", { endpoint: "/api/cart/totals", error });
     return NextResponse.json({ error: "Unable to calculate WooCommerce totals" }, { status: 502 });
   }
 }

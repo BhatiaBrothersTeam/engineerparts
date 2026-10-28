@@ -12,6 +12,8 @@ const nextConfig = {
   // `require("xlsx")` in the server bundle so it gets real Node `fs`.
   experimental: {
     serverComponentsExternalPackages: ["xlsx"],
+    // Runs instrumentation.ts at server start to install the production log sink.
+    instrumentationHook: true,
   },
   images: {
     remotePatterns: [

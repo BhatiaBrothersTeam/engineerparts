@@ -90,11 +90,34 @@ export function isPurchasable(status: ProductStatus): boolean {
   return status === "Available" || status === "Low Stock";
 }
 
-export const WHATSAPP_NUMBER = normalizePhone(CONTACT_PHONE).replace(/^\+/, "");
+// wa.me only accepts the international number as digits: no "+", "00", spaces or dashes.
+export const WHATSAPP_NUMBER = CONTACT_PHONE.replace(/\D/g, "").replace(/^00/, "");
 
 export function whatsappLink(message: string): string {
   if (!WHATSAPP_NUMBER) return `/contact?message=${encodeURIComponent(message)}`;
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+}
+
+/**
+ * Opens WhatsApp (the app on phones, WhatsApp Web on desktop) with the message
+ * pre-filled for the business number. Build the message at click time so listing
+ * links use the current origin. Without a configured number, goes to the contact page.
+ */
+export function openWhatsApp(message: string): void {
+  const url = whatsappLink(message);
+  if (!WHATSAPP_NUMBER) {
+    window.location.assign(url);
+    return;
+  }
+  // "noopener" in the features string makes window.open always return null, so detach
+  // the opener manually to keep blocked-popup detection working.
+  const opened = window.open(url, "_blank");
+  if (opened) {
+    opened.opener = null;
+    return;
+  }
+  // Popup blocked: send this tab to WhatsApp instead so the message still goes through.
+  window.location.assign(url);
 }
 
 export function mailtoLink(email: string, subject: string, body: string): string {
@@ -105,14 +128,23 @@ export function productWhatsAppMessage(item: {
   name: string;
   sku: string;
   part_number?: string;
+  brand?: string;
+  price?: string;
+  quantity?: number;
+  wholesale?: boolean;
   url: string;
 }): string {
   return [
-    `Hello Engineerparts.com, I would like to enquire about this clearance item:`,
-    ``,
+    // Trailing newline keeps a blank line after the greeting (empty entries are filtered).
+    item.wholesale
+      ? `Hello Engineerparts.com, I would like wholesale pricing for this clearance item:\n`
+      : `Hello Engineerparts.com, I would like to enquire about this clearance item:\n`,
     `Product: ${item.name}`,
+    item.brand ? `Brand: ${item.brand}` : "",
     `SKU: ${item.sku}`,
-    item.part_number ? `Part number: ${item.part_number}` : "",
+    item.part_number && item.part_number !== item.sku ? `Part number: ${item.part_number}` : "",
+    item.price ? `Listed price: ${item.price}` : "",
+    item.quantity ? `Quantity required: ${item.quantity}` : "",
     `Listing: ${item.url}`,
   ]
     .filter(Boolean)

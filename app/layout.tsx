@@ -13,6 +13,7 @@ import { SavedProductsProvider } from "@/components/providers/SavedProductsProvi
 import { EnquiryModal } from "@/components/modals/EnquiryModal";
 import { TopBar } from "@/components/TopBar";
 import { CookieConsent } from "@/components/CookieConsent";
+import { ClientErrorReporter } from "@/components/ClientErrorReporter";
 import { categorySummary } from "@/lib/categories";
 import { getProducts } from "@/lib/woocommerce";
 
@@ -55,6 +56,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </AuthProvider>
         </ToastProvider>
         <CookieConsent />
+        <ClientErrorReporter />
       </body>
     </html>
   );

@@ -8,7 +8,18 @@ import { useToast } from "@/components/providers/ToastProvider";
 import { SaveProductButton } from "@/components/account/SaveProductButton";
 import { ConditionPill, ListingBadges, StatusPill } from "@/components/ui/Badge";
 import type { Product } from "@/lib/types";
-import { cn, formatNumber, formatPrice, isPurchasable, relativeAdded } from "@/lib/utils";
+import { WhatsAppIcon } from "@/components/Header";
+import { track } from "@/lib/analytics";
+import {
+  absoluteUrl,
+  cn,
+  formatNumber,
+  formatPrice,
+  isPurchasable,
+  openWhatsApp,
+  productWhatsAppMessage,
+  relativeAdded,
+} from "@/lib/utils";
 
 export function ProductCard({ product, layout = "grid" }: { product: Product; layout?: "grid" | "list" }) {
   const { addItem } = useCart();
@@ -39,6 +50,20 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
       1,
     );
     toast(`${product.sku} added to cart`);
+  }
+
+  function onWhatsApp() {
+    track("whatsapp_click", { source: "ProductCard", sku: product.sku });
+    openWhatsApp(
+      productWhatsAppMessage({
+        name: product.name,
+        sku: product.sku,
+        part_number: product.part_number,
+        brand: product.brand,
+        price: product.price === null ? undefined : priceLabel,
+        url: absoluteUrl(`/product/${product.slug}`),
+      }),
+    );
   }
 
   function onWooCommerceCheckout() {
@@ -170,15 +195,7 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
                     Buy Now
                   </button>
                 ) : null}
-                {purchasable ? (
-                  <button
-                    type="button"
-                    onClick={() => openEnquiry({ mode: "product", product })}
-                    className="link-underline product-card-wide inline-flex min-h-10 items-center justify-center text-xs font-semibold text-steel-600 hover:text-brand-700"
-                  >
-                    Enquire Now
-                  </button>
-                ) : (
+                {purchasable ? null : (
                   <button
                     type="button"
                     onClick={() => openEnquiry({ mode: "product", product })}
@@ -189,6 +206,28 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
                 )}
               </>
             )}
+            <div className="product-card-wide flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+              {purchasable && product.listing_type !== "Whole Lot" ? (
+                <button
+                  type="button"
+                  onClick={() => openEnquiry({ mode: "product", product })}
+                  className="link-underline inline-flex min-h-10 items-center whitespace-nowrap text-xs font-semibold text-steel-600 hover:text-brand-700"
+                >
+                  Enquire Now
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={onWhatsApp}
+                className="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap text-xs font-semibold text-emerald-700 transition-colors hover:text-emerald-800"
+                aria-label={`Ask about ${product.name} on WhatsApp`}
+              >
+                <span className="shrink-0">
+                  <WhatsAppIcon />
+                </span>
+                WhatsApp
+              </button>
+            </div>
           </div>
         </div>
       </div>

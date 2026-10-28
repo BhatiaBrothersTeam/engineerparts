@@ -10,7 +10,7 @@ import {
   formatNumber,
   formatPrice,
   lotWhatsAppMessage,
-  whatsappLink,
+  openWhatsApp,
 } from "@/lib/utils";
 
 export function LotActions({ lot }: { lot: Lot }) {
@@ -35,16 +35,12 @@ export function LotActions({ lot }: { lot: Lot }) {
 
   function onWhatsApp() {
     track("whatsapp_click", { source: "Lot page", lot_reference: lot.lot_reference });
-    window.open(
-      whatsappLink(
-        lotWhatsAppMessage({
-          name: lot.name,
-          lot_reference: lot.lot_reference,
-          url: absoluteUrl(`/lots/${lot.lot_reference}`),
-        }),
-      ),
-      "_blank",
-      "noopener",
+    openWhatsApp(
+      lotWhatsAppMessage({
+        name: lot.name,
+        lot_reference: lot.lot_reference,
+        url: absoluteUrl(`/lots/${lot.lot_reference}`),
+      }),
     );
   }
 

@@ -1,4 +1,5 @@
 import "server-only";
+import { logWarn } from "@/lib/logger";
 
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { unstable_cache } from "next/cache";
@@ -343,9 +344,7 @@ const getCachedWooProducts = unstable_cache(
         .flatMap((page) => page.products)
         .map((product) => mapProduct({ ...product, currency_code: currency }));
     } catch (error) {
-      console.warn(
-        `WooCommerce REST API unavailable (${error instanceof Error ? error.message : "unknown error"}); using the public Store API.`,
-      );
+      logWarn("woocommerce_rest_unavailable", { fallback: "store_api", error });
       return getStoreProducts(url);
     }
   },

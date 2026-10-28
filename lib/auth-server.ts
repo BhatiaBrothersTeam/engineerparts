@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE, type AuthResponse, type Customer } from "@/lib/account";
+import { logError } from "@/lib/logger";
 
 function configuration() {
   const wordpressUrl = (process.env.WORDPRESS_URL || process.env.WOOCOMMERCE_URL)?.replace(/\/$/, "");
@@ -48,11 +49,10 @@ export async function wordpressAccountRequest<T extends { ok: boolean } = AuthRe
     }
     return { status: response.status, data: raw as T };
   } catch (error) {
-    console.error(JSON.stringify({
-      timestamp: new Date().toISOString(),
+    logError("wordpress_account_request_failed", {
       endpoint: path,
       category: error instanceof DOMException && error.name === "TimeoutError" ? "timeout" : "wordpress_unavailable",
-    }));
+    });
     return { status: 503, data: { ok: false, error: "Account service is temporarily unavailable." } as unknown as T };
   }
 }

@@ -11,7 +11,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { primaryNav } from "@/lib/nav";
 import { track } from "@/lib/analytics";
 import type { CategorySummaryItem } from "@/lib/categories";
-import { WHATSAPP_NUMBER, cn, whatsappLink } from "@/lib/utils";
+import { WHATSAPP_NUMBER, cn, openWhatsApp } from "@/lib/utils";
 
 const NAV_ICON: Record<string, () => JSX.Element> = {
   "/clearance": TagIcon,
@@ -93,10 +93,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
 
   function onWhatsApp(context = "General enquiry") {
     track("whatsapp_click", { source: context });
-    const message = encodeURIComponent(
-      `Hello Engineerparts.com, I would like to enquire about your clearance stock. (${context})`,
-    );
-    window.open(whatsappLink(decodeURIComponent(message)), "_blank", "noopener");
+    openWhatsApp(`Hello Engineerparts.com, I would like to enquire about your clearance stock. (${context})`);
   }
 
   return (

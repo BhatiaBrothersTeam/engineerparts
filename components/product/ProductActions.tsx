@@ -13,8 +13,8 @@ import {
   formatNumber,
   formatPrice,
   isPurchasable,
+  openWhatsApp,
   productWhatsAppMessage,
-  whatsappLink,
 } from "@/lib/utils";
 import { track } from "@/lib/analytics";
 
@@ -78,18 +78,17 @@ export function ProductActions({ product }: { product: Product }) {
   }
 
   function onWhatsApp() {
-    track("whatsapp_click", { source: "Product page", sku: product.sku });
-    window.open(
-      whatsappLink(
-        productWhatsAppMessage({
-          name: product.name,
-          sku: product.sku,
-          part_number: product.part_number,
-          url: absoluteUrl(`/product/${product.slug}`),
-        }),
-      ),
-      "_blank",
-      "noopener",
+    track("whatsapp_click", { source: "Product page", sku: product.sku, quantity });
+    openWhatsApp(
+      productWhatsAppMessage({
+        name: product.name,
+        sku: product.sku,
+        part_number: product.part_number,
+        brand: product.brand,
+        price: product.price === null ? undefined : formatPrice(product.price, product.currency),
+        quantity,
+        url: absoluteUrl(`/product/${product.slug}`),
+      }),
     );
   }
 
