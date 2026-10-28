@@ -62,7 +62,7 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
   return (
     <article
       className={cn(
-        "card card-interactive group relative flex overflow-hidden",
+        "product-card card card-interactive group relative flex overflow-hidden",
         list ? "flex-col sm:flex-row" : "h-full flex-col",
       )}
     >
@@ -86,7 +86,7 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
             src={product.images[0]}
             alt={product.name}
             fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            sizes={list ? "(max-width: 640px) 100vw, 256px" : "(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"}
             className="object-contain p-2 transition-transform duration-500 group-hover:scale-[1.03]"
           />
           {product.status === "Sold" ? (
@@ -100,24 +100,24 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
         <ListingBadges badges={product.badges} className="absolute left-3 top-3" />
       </Link>
 
-      <div className={cn("flex min-w-0 flex-1 flex-col p-4", list ? "sm:p-5" : "")}>
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          {product.brand ? <p className="min-w-0 truncate text-[11px] font-bold uppercase tracking-[0.14em] text-brand-700">{product.brand}</p> : null}
+      <div className={cn("product-card-body", list ? "sm:p-5" : "")}>
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+          {product.brand ? <p className="min-w-0 max-w-full truncate text-[11px] font-bold uppercase tracking-[0.14em] text-brand-700">{product.brand}</p> : null}
           <StatusPill status={product.status} />
         </div>
 
-        <h3 className={cn("mt-2 line-clamp-2 break-words font-bold leading-snug text-navy-900", list ? "text-lg" : "min-h-10 text-[15px]")}>
+        <h3 className={cn("product-card-title", list && "sm:text-lg")}>
           <Link href={`/product/${product.slug}`} className="relative z-10 hover:text-brand-700" tabIndex={-1} aria-hidden="true">
             {product.name}
           </Link>
         </h3>
 
-        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+        <dl className="product-card-specs">
           <div className="min-w-0">
             <dt className="text-steel-500">SKU</dt>
             <dd className="truncate font-semibold text-navy-800" title={product.sku}>{product.sku}</dd>
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0" data-extra>
             <dt className="text-steel-500">Part number</dt>
             <dd className="truncate font-semibold text-navy-800" title={product.part_number}>
               {product.part_number}
@@ -129,7 +129,7 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
               {product.quantity_available === null ? "Contact for quantity" : `${formatNumber(product.quantity_available)} units`}
             </dd>
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0" data-extra>
             <dt className="text-steel-500">Added</dt>
             <dd className="break-words font-semibold text-navy-800">{relativeAdded(product.added_date)}</dd>
           </div>
@@ -146,15 +146,15 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
 
         <div className="mt-auto pt-4">
           <div className="border-t border-navy-100 pt-3">
-            <p className="text-xl font-extrabold tracking-tight text-navy-900">{priceLabel}</p>
+            <p className="product-card-price">{priceLabel}</p>
           </div>
 
-          <div className="relative z-10 mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="product-card-actions">
             {product.listing_type === "Whole Lot" ? (
               <button
                 type="button"
                 onClick={() => openEnquiry({ mode: "lot", product })}
-                className="btn-primary btn-sm sm:col-span-2"
+                className="btn-primary btn-sm product-card-wide"
               >
                 Enquire for Whole Lot
               </button>
@@ -166,7 +166,7 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
                   </button>
                 ) : null}
                 {wooPurchasable ? (
-                  <button type="button" onClick={onWooCommerceCheckout} className="btn-primary btn-sm sm:col-start-2">
+                  <button type="button" onClick={onWooCommerceCheckout} className="btn-primary btn-sm">
                     Buy Now
                   </button>
                 ) : null}
@@ -174,7 +174,7 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
                   <button
                     type="button"
                     onClick={() => openEnquiry({ mode: "product", product })}
-                    className="link-underline sm:col-span-2 inline-flex min-h-10 items-center justify-center text-xs font-semibold text-steel-600 hover:text-brand-700"
+                    className="link-underline product-card-wide inline-flex min-h-10 items-center justify-center text-xs font-semibold text-steel-600 hover:text-brand-700"
                   >
                     Enquire Now
                   </button>
@@ -182,7 +182,7 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
                   <button
                     type="button"
                     onClick={() => openEnquiry({ mode: "product", product })}
-                    className="btn-navy btn-sm sm:col-span-2"
+                    className="btn-navy btn-sm product-card-wide"
                   >
                     {product.status === "Sold" ? "Enquire About Similar" : "Enquire Now"}
                   </button>

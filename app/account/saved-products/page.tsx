@@ -31,7 +31,7 @@ export default async function SavedProductsPage() {
               </svg>
             </IconTile>
           </div>
-          <h3 className="mt-4 text-lg font-extrabold text-navy-950">No saved products yet.</h3>
+          <h3 className="text-h4 mt-4 text-navy-950">No saved products yet.</h3>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-steel-600">
             Save products while browsing to compare and order them later.
           </p>

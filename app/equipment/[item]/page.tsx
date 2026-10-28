@@ -65,7 +65,7 @@ export default function EquipmentDetailPage({ params }: { params: { item: string
               <StatusPill status={unit.status} />
               <ConditionPill condition={unit.condition} />
             </div>
-            <h1 className="mt-3 text-2xl font-extrabold leading-tight text-navy-900 sm:text-3xl">
+            <h1 className="text-h1 mt-3 text-navy-900">
               {unit.name}
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-steel-600">{unit.description}</p>
@@ -131,7 +131,7 @@ export default function EquipmentDetailPage({ params }: { params: { item: string
         <div className="shell grid gap-10 py-12 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <div className="space-y-10">
             <div>
-              <h2 className="text-lg font-extrabold text-navy-900">Condition</h2>
+              <h2 className="text-h3 text-navy-900">Condition</h2>
               <div className="mt-3 rounded-card border border-navy-100 bg-white p-4">
                 <ConditionPill condition={unit.condition} />
                 <p className="mt-3 text-sm leading-relaxed text-steel-700">{unit.condition_notes}</p>
@@ -139,21 +139,21 @@ export default function EquipmentDetailPage({ params }: { params: { item: string
             </div>
 
             <div>
-              <h2 className="text-lg font-extrabold text-navy-900">Technical specifications</h2>
+              <h2 className="text-h3 text-navy-900">Technical specifications</h2>
               <div className="mt-3">
                 <SpecTable specs={unit.specifications} />
               </div>
             </div>
 
             <div>
-              <h2 className="text-lg font-extrabold text-navy-900">Inspection information</h2>
+              <h2 className="text-h3 text-navy-900">Inspection information</h2>
               <div className="mt-3 rounded-card border border-navy-100 bg-white p-4 text-sm leading-relaxed text-steel-700">
                 {unit.inspection}
               </div>
             </div>
 
             <div>
-              <h2 className="text-lg font-extrabold text-navy-900">Documents</h2>
+              <h2 className="text-h3 text-navy-900">Documents</h2>
               <div className="mt-3">
                 <DocumentList documents={unit.documents} reference={unit.reference} source="equipment_page" />
               </div>

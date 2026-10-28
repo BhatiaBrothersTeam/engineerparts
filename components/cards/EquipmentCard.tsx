@@ -36,7 +36,7 @@ export function EquipmentCard({ unit }: { unit: Equipment }) {
           <StatusPill status={unit.status} />
         </div>
 
-        <h3 className="mt-2 break-words text-[17px] font-bold leading-snug text-navy-900">
+        <h3 className="text-h4 mt-2 break-words text-navy-900">
           <Link href={`/equipment/${unit.slug}`} className="hover:text-brand-700">
             {unit.name}
           </Link>

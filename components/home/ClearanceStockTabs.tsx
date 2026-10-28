@@ -21,7 +21,7 @@ export function ClearanceStockTabs({ productsByTab }: { productsByTab: Record<Ta
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center gap-2 border-b border-navy-100">
+      <div className="no-scrollbar -mx-4 mb-6 flex items-center gap-1 overflow-x-auto border-b border-navy-100 px-4 sm:mx-0 sm:gap-2 sm:px-0">
         {TABS.map((item) => (
           <button
             key={item.id}
@@ -29,7 +29,7 @@ export function ClearanceStockTabs({ productsByTab }: { productsByTab: Record<Ta
             onClick={() => setTab(item.id)}
             aria-pressed={tab === item.id}
             className={cn(
-              "-mb-px border-b-2 px-4 py-3 text-sm font-semibold transition-colors",
+              "-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold transition-colors sm:px-4",
               tab === item.id
                 ? "border-brand-600 text-brand-700"
                 : "border-transparent text-steel-600 hover:text-navy-900",
@@ -40,13 +40,13 @@ export function ClearanceStockTabs({ productsByTab }: { productsByTab: Record<Ta
         ))}
         <Link
           href="/clearance"
-          className="mb-2 ml-auto hidden text-sm font-semibold text-brand-700 hover:text-brand-500 sm:block"
+          className="mb-2 ml-auto hidden shrink-0 text-sm font-semibold text-brand-700 hover:text-brand-500 sm:block"
         >
           View all clearance &rarr;
         </Link>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="product-grid-showcase">
         {list.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}

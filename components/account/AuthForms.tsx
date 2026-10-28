@@ -30,6 +30,7 @@ async function authRequest(action: string, body: Record<string, unknown>): Promi
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    cache: "no-store",
   });
   const data = (await response.json()) as AuthResponse;
   if (!response.ok) throw new Error(data.error || "Unable to complete this request.");
@@ -330,7 +331,7 @@ function AuthCard({ eyebrow, title, description, wide = false, children }: { eye
       <div className={`card ${wide ? "p-6 sm:p-9" : "p-6 sm:p-8"}`}>
         <div className="flex flex-col items-center text-center">
           <p className="eyebrow text-brand-700">{eyebrow}</p>
-          <h1 className="mt-2 text-2xl font-extrabold text-navy-950 sm:text-3xl">{title}</h1>
+          <h1 className="text-h1 mt-2 text-navy-950">{title}</h1>
           {description ? <p className="mt-2 max-w-sm text-sm leading-6 text-steel-600">{description}</p> : null}
         </div>
         {children}

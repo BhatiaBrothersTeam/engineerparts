@@ -97,7 +97,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
               {product.condition !== "Not provided" ? <ConditionPill condition={product.condition} /> : null}
             </div>
 
-            <h1 className="mt-3 break-words text-2xl font-extrabold leading-tight text-navy-900 sm:text-3xl">
+            <h1 className="text-h1 mt-3 break-words text-navy-900">
               {product.name}
             </h1>
 
@@ -148,7 +148,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
               </div>
             ) : null}
 
-            <dl className="card mt-5 grid grid-cols-1 gap-x-4 gap-y-3 p-4 text-xs sm:grid-cols-2">
+            <dl className="card mt-5 grid grid-cols-2 gap-x-4 gap-y-3 p-4 text-xs">
               <Meta label="SKU" value={product.sku} />
               <Meta label="Manufacturer part number" value={product.part_number} />
               <Meta label="Model" value={product.model} />
@@ -185,13 +185,13 @@ export default async function ProductPage({ params }: { params: { slug: string }
         <div className="shell grid gap-10 py-12 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <div className="space-y-10">
             <div>
-              <h2 className="text-lg font-extrabold text-navy-900">Description</h2>
+              <h2 className="text-h3 text-navy-900">Description</h2>
               <p className="mt-3 text-sm leading-relaxed text-steel-700">{product.description}</p>
             </div>
 
             {product.condition !== "Not provided" || product.condition_notes ? (
               <div>
-                <h2 className="text-lg font-extrabold text-navy-900">Condition notes</h2>
+                <h2 className="text-h3 text-navy-900">Condition notes</h2>
                 <div className="card mt-3 p-4">
                   {product.condition !== "Not provided" ? <ConditionPill condition={product.condition} /> : null}
                   {product.condition_notes ? (
@@ -202,14 +202,14 @@ export default async function ProductPage({ params }: { params: { slug: string }
             ) : null}
 
             <div>
-              <h2 className="text-lg font-extrabold text-navy-900">Specifications</h2>
+              <h2 className="text-h3 text-navy-900">Specifications</h2>
               <div className="mt-3">
                 <SpecTable specs={product.specifications} />
               </div>
             </div>
 
             <div>
-              <h2 className="text-lg font-extrabold text-navy-900">Documents</h2>
+              <h2 className="text-h3 text-navy-900">Documents</h2>
               <div className="mt-3">
                 <DocumentList
                   documents={product.documents}
@@ -260,7 +260,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
             title={product.status === "Sold" ? "Similar units currently available" : "More from this category"}
             action={{ label: "View all clearance", href: "/clearance" }}
           />
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 product-grid">
             {(product.status === "Sold" ? similar : related).map((item) => (
               <ProductCard key={item.id} product={item} />
             ))}

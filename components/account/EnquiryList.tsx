@@ -32,7 +32,40 @@ export function EnquiryList() {
   }
 
   return (
-    <div role="region" aria-label="Enquiries table, scroll horizontally for more columns" tabIndex={0} className="overflow-x-auto rounded-card border border-navy-100 bg-white">
+    <>
+    <ul className="space-y-3 sm:hidden">
+      {leads.map((lead) => (
+        <li key={lead.lead_id} className="card p-4 text-sm">
+          <div className="flex items-start justify-between gap-3">
+            <p className="min-w-0 break-all font-mono text-xs font-semibold text-navy-900">{lead.lead_id}</p>
+            <span className="shrink-0 rounded-full bg-navy-100 px-2.5 py-0.5 text-[11px] font-semibold capitalize text-navy-800">
+              {lead.status}
+            </span>
+          </div>
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+            <div className="min-w-0">
+              <dt className="text-steel-500">Type</dt>
+              <dd className="font-semibold capitalize text-navy-800">{lead.lead_type.replace(/_/g, " ")}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-steel-500">Submitted</dt>
+              <dd className="font-semibold text-navy-800">{formatDate(lead.created_at)}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-steel-500">Item</dt>
+              <dd className="break-words font-semibold text-navy-800">
+                {lead.sku || lead.lot_id || lead.equipment_id || "General"}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-steel-500">Company</dt>
+              <dd className="break-words font-semibold text-navy-800">{lead.company}</dd>
+            </div>
+          </dl>
+        </li>
+      ))}
+    </ul>
+    <div role="region" aria-label="Enquiries table, scroll horizontally for more columns" tabIndex={0} className="hidden overflow-x-auto rounded-card border border-navy-100 bg-white sm:block">
       <table className="min-w-full text-sm">
         <thead className="bg-navy-900 text-left text-[11px] font-bold uppercase tracking-wide text-white">
           <tr>
@@ -60,5 +93,6 @@ export function EnquiryList() {
         </tbody>
       </table>
     </div>
+    </>
   );
 }

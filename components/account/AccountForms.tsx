@@ -36,7 +36,7 @@ export function ProfileForm({ customer }: { customer: AccountCustomer }) {
   }
   return <form onSubmit={submit} className="card space-y-6 p-5 sm:p-6">
     <div>
-      <h3 className="text-base font-extrabold text-navy-950">Contact details</h3>
+      <h3 className="text-h4 text-navy-950">Contact details</h3>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <Field label="First name"><input className="field" autoComplete="given-name" value={form.firstName} onChange={(e) => update("firstName", e.target.value)} required /></Field>
         <Field label="Last name"><input className="field" autoComplete="family-name" value={form.lastName} onChange={(e) => update("lastName", e.target.value)} required /></Field>
@@ -45,7 +45,7 @@ export function ProfileForm({ customer }: { customer: AccountCustomer }) {
       </div>
     </div>
     <div className="hairline pt-6">
-      <h3 className="text-base font-extrabold text-navy-950">Company details</h3>
+      <h3 className="text-h4 text-navy-950">Company details</h3>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <Field label="Company"><input className="field" autoComplete="organization" value={form.company} onChange={(e) => update("company", e.target.value)} /></Field>
         <Field label="Job title"><input className="field" autoComplete="organization-title" value={form.jobTitle} onChange={(e) => update("jobTitle", e.target.value)} /></Field>
@@ -103,7 +103,7 @@ export function SecurityForm({ activeSessionCount }: { activeSessionCount: numbe
       </div>
     </div>
     <form onSubmit={submit} className="card max-w-2xl space-y-4 p-5 sm:p-6">
-      <h3 className="text-base font-extrabold text-navy-950">Change password</h3>
+      <h3 className="text-h4 text-navy-950">Change password</h3>
       <Field label="Current password"><input className="field" type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrent(e.target.value)} required /></Field>
       <Field label="New password"><input className="field" type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNext(e.target.value)} required /></Field>
       <Field label="Confirm new password"><input className="field" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required /></Field>
@@ -117,7 +117,7 @@ export function SecurityForm({ activeSessionCount }: { activeSessionCount: numbe
 
 function AddressPanel({ title, value, onChange, countries, billing = false }: { title: string; value: CustomerAddress; onChange: (value: CustomerAddress) => void; countries: WooCountry[]; billing?: boolean }) {
   const update = (key: keyof CustomerAddress, next: string) => onChange({ ...value, [key]: next });
-  return <section className="card p-5 sm:p-6"><h3 className="text-lg font-extrabold text-navy-900">{title}</h3><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="First name"><input className="field" value={value.firstName} onChange={(e) => update("firstName", e.target.value)} required /></Field><Field label="Last name"><input className="field" value={value.lastName} onChange={(e) => update("lastName", e.target.value)} required /></Field><div className="sm:col-span-2"><Field label="Company"><input className="field" value={value.company} onChange={(e) => update("company", e.target.value)} /></Field></div><div className="sm:col-span-2"><Field label="Address line 1"><input className="field" value={value.address1} onChange={(e) => update("address1", e.target.value)} required /></Field></div><div className="sm:col-span-2"><Field label="Address line 2"><input className="field" value={value.address2} onChange={(e) => update("address2", e.target.value)} /></Field></div><Field label="City"><input className="field" value={value.city} onChange={(e) => update("city", e.target.value)} required /></Field><Field label="State / Emirate"><input className="field" value={value.state} onChange={(e) => update("state", e.target.value)} /></Field><Field label="Postal code"><input className="field" value={value.postalCode} onChange={(e) => update("postalCode", e.target.value)} /></Field><Field label="Country"><select className="field" value={value.country || "AE"} onChange={(e) => update("country", e.target.value)} required>{countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}</select></Field>{billing ? <><Field label="Email"><input className="field" type="email" value={value.email} onChange={(e) => update("email", e.target.value)} required /></Field><Field label="Phone"><input className="field" type="tel" value={value.phone} onChange={(e) => update("phone", e.target.value)} required /></Field></> : null}</div></section>;
+  return <section className="card p-5 sm:p-6"><h3 className="text-h4 text-navy-900">{title}</h3><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="First name"><input className="field" value={value.firstName} onChange={(e) => update("firstName", e.target.value)} required /></Field><Field label="Last name"><input className="field" value={value.lastName} onChange={(e) => update("lastName", e.target.value)} required /></Field><div className="sm:col-span-2"><Field label="Company"><input className="field" value={value.company} onChange={(e) => update("company", e.target.value)} /></Field></div><div className="sm:col-span-2"><Field label="Address line 1"><input className="field" value={value.address1} onChange={(e) => update("address1", e.target.value)} required /></Field></div><div className="sm:col-span-2"><Field label="Address line 2"><input className="field" value={value.address2} onChange={(e) => update("address2", e.target.value)} /></Field></div><Field label="City"><input className="field" value={value.city} onChange={(e) => update("city", e.target.value)} required /></Field><Field label="State / Emirate"><input className="field" value={value.state} onChange={(e) => update("state", e.target.value)} /></Field><Field label="Postal code"><input className="field" value={value.postalCode} onChange={(e) => update("postalCode", e.target.value)} /></Field><Field label="Country"><select className="field" value={value.country || "AE"} onChange={(e) => update("country", e.target.value)} required>{countries.map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}</select></Field>{billing ? <><Field label="Email"><input className="field" type="email" value={value.email} onChange={(e) => update("email", e.target.value)} required /></Field><Field label="Phone"><input className="field" type="tel" value={value.phone} onChange={(e) => update("phone", e.target.value)} required /></Field></> : null}</div></section>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="field-label">{label}</span>{children}</label>; }

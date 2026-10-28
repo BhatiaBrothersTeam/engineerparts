@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Analytics } from "@vercel/analytics/next";
 import { Archivo, Inter } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
@@ -12,6 +11,7 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import { SavedProductsProvider } from "@/components/providers/SavedProductsProvider";
 import { EnquiryModal } from "@/components/modals/EnquiryModal";
 import { TopBar } from "@/components/TopBar";
+import { CookieConsent } from "@/components/CookieConsent";
 import { categorySummary } from "@/lib/categories";
 import { getProducts } from "@/lib/woocommerce";
 
@@ -66,7 +66,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </SavedProductsProvider>
           </AuthProvider>
         </ToastProvider>
-        <Analytics />
+        <CookieConsent />
       </body>
     </html>
   );

@@ -61,7 +61,7 @@ export default async function LotDetailPage({ params }: { params: { "lot-referen
               <StatusPill status={lot.status} />
               <ConditionPill condition={lot.condition} />
             </div>
-            <h1 className="mt-3 text-2xl font-extrabold leading-tight text-navy-900 sm:text-3xl">{lot.name}</h1>
+            <h1 className="text-h1 mt-3 text-navy-900">{lot.name}</h1>
             <p className="mt-3 text-sm leading-relaxed text-steel-600">{lot.description}</p>
 
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -122,7 +122,7 @@ export default async function LotDetailPage({ params }: { params: { "lot-referen
         <div className="shell py-12">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-lg font-extrabold text-navy-900">Inventory list</h2>
+              <h2 className="text-h3 text-navy-900">Inventory list</h2>
               <p className="mt-1 text-sm text-steel-600">
                 Line items, part numbers, quantities and condition as recorded at the warehouse.
               </p>

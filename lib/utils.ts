@@ -42,7 +42,7 @@ export function isPlausibleAddress(value: string): boolean {
 }
 
 export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() ?? "";
-export const CONTACT_PHONE = process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim() ?? "";
+export const CONTACT_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.trim() ?? "";
 
 export function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("en-AE", {
@@ -90,7 +90,7 @@ export function isPurchasable(status: ProductStatus): boolean {
   return status === "Available" || status === "Low Stock";
 }
 
-export const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
+export const WHATSAPP_NUMBER = normalizePhone(CONTACT_PHONE).replace(/^\+/, "");
 
 export function whatsappLink(message: string): string {
   if (!WHATSAPP_NUMBER) return `/contact?message=${encodeURIComponent(message)}`;

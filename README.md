@@ -56,7 +56,7 @@ WooCommerce configuration is required to display products. Without it, the produ
 
 1. In WordPress, open **WooCommerce > Settings > Advanced > REST API**.
 2. Create a key with **Read/Write** access for a user who can read products and create orders.
-3. Copy `.env.example` to `.env.local`.
+3. Copy `.env.example` to `.env`.
 4. Replace the example values:
 
   ```env
@@ -68,12 +68,11 @@ WooCommerce configuration is required to display products. Without it, the produ
   NEXT_PUBLIC_TURNSTILE_SITE_KEY=your-cloudflare-turnstile-site-key
   NEXT_PUBLIC_WHATSAPP_NUMBER=
   NEXT_PUBLIC_CONTACT_EMAIL=
-  NEXT_PUBLIC_CONTACT_PHONE=
   ```
 
 5. Restart `npm run dev` after changing environment variables.
 
-The app fetches all published WooCommerce products in pages of 100 and caches responses for five minutes. Keys are read only by server code and are never sent to the browser. HTTPS stores use Basic Authentication; local HTTP stores use OAuth 1.0 request signing as required by WooCommerce. If the authenticated REST API rejects the key, the app falls back to WooCommerce's public Store API and still displays published products. Create the REST API key for an Administrator or Shop Manager user to expose custom metadata and create checkout orders. Product currency is read from WooCommerce's Store API. `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_CONTACT_EMAIL`, and `NEXT_PUBLIC_CONTACT_PHONE` are optional public contact details; set only company-approved values, then restart the app. Unset details are not displayed.
+The app fetches all published WooCommerce products in pages of 100 and caches responses for five minutes. Keys are read only by server code and are never sent to the browser. HTTPS stores use Basic Authentication; local HTTP stores use OAuth 1.0 request signing as required by WooCommerce. If the authenticated REST API rejects the key, the app falls back to WooCommerce's public Store API and still displays published products. Create the REST API key for an Administrator or Shop Manager user to expose custom metadata and create checkout orders. Product currency is read from WooCommerce's Store API. `NEXT_PUBLIC_WHATSAPP_NUMBER` and `NEXT_PUBLIC_CONTACT_EMAIL` are optional public contact details; set only company-approved values in `.env`. Use `NEXT_PUBLIC_WHATSAPP_NUMBER` as the single source for all company phone contacts and WhatsApp links, including the country code (for example, `"+971 50 601 8048"`). WhatsApp links automatically remove phone formatting. Restart the development server after changes; production builds must be rebuilt because Next.js embeds public environment variables at build time. Unset details are not displayed.
 
 ### Customer accounts
 

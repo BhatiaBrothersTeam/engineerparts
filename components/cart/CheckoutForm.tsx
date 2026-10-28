@@ -289,7 +289,7 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
         <IconTile>
           <span className="block h-5 w-5 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" aria-hidden="true" />
         </IconTile>
-        <h1 className="mt-5 text-xl font-extrabold text-navy-900">Preparing your secure payment</h1>
+        <h1 className="text-h1 mt-5 text-navy-900">Preparing your secure payment</h1>
         <p className="mt-3 text-sm leading-relaxed text-steel-600">
           Your order is being submitted. We’ll redirect you to Nomod shortly. Please don’t refresh or close this page.
         </p>
@@ -354,7 +354,7 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
               <IconTile>
                 <UserIcon />
               </IconTile>
-              <h2 className="text-lg font-extrabold text-navy-900">Your details</h2>
+              <h2 className="text-h3 text-navy-900">Your details</h2>
             </div>
             <fieldset className="mt-5">
               <legend className="field-label">I am buying as</legend>
@@ -414,7 +414,7 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
               <IconTile>
                 <TruckIcon />
               </IconTile>
-              <h2 className="text-lg font-extrabold text-navy-900">How would you like to receive your order?</h2>
+              <h2 className="text-h3 text-navy-900">How would you like to receive your order?</h2>
             </div>
             <div className="mt-4 rounded-md border border-brand-300 bg-brand-50 px-4 py-3">
               <p className="text-sm font-semibold text-navy-900">Delivery</p>
@@ -469,7 +469,7 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
                 <IconTile>
                   <CardIcon />
                 </IconTile>
-                <h2 id="review-payment-heading" className="text-lg font-extrabold text-navy-900">Payment method</h2>
+                <h2 id="review-payment-heading" className="text-h3 text-navy-900">Payment method</h2>
               </div>
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-md border border-brand-300 bg-brand-50 px-4 py-4">
                 <input
@@ -496,7 +496,7 @@ export function CheckoutForm({ countries }: { countries: WooCountry[] }) {
                 <IconTile>
                   <ClipboardIcon />
                 </IconTile>
-                <h2 id="review-order-heading" className="text-lg font-extrabold text-navy-900">Review</h2>
+                <h2 id="review-order-heading" className="text-h3 text-navy-900">Review</h2>
               </div>
               <dl className="mt-4 divide-y divide-navy-100 border-y border-navy-100 text-sm">
               <div className="py-3">

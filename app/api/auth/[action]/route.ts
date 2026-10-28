@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { wordpressAccountRequest } from "@/lib/auth-server";
 import { SESSION_COOKIE, type AuthResponse } from "@/lib/account";
+import { privateJson } from "@/lib/private-response";
 
 const POST_ACTIONS = new Set([
   "register",
@@ -25,11 +26,11 @@ function sameOrigin(request: NextRequest): boolean {
 }
 
 function clientIp(request: NextRequest): string {
-  return (request.headers.get("x-forwarded-for")?.split(",")[0] ?? request.ip ?? "unknown").trim();
+  return request.ip?.trim() || "unknown";
 }
 
 function responseBody(data: AuthResponse & { token?: string; expiresAt?: string }, status: number) {
-  return NextResponse.json(data.ok ? {
+  return privateJson(data.ok ? {
     ok: true,
     message: data.message,
     customer: data.customer,
@@ -38,7 +39,7 @@ function responseBody(data: AuthResponse & { token?: string; expiresAt?: string 
     ok: false,
     error: data.error || "Unable to complete this request.",
     code: data.code,
-  }, { status });
+  }, status);
 }
 
 function invalidPayload(action: string, value: unknown): string | null {
@@ -63,43 +64,43 @@ function invalidPayload(action: string, value: unknown): string | null {
 
 export async function GET(request: NextRequest, { params }: { params: { action: string } }) {
   if (params.action !== "me") {
-    return NextResponse.json({ ok: false, error: "Not found." }, { status: 404 });
+    return privateJson({ ok: false, error: "Not found." }, 404);
   }
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (!token) {
-    return NextResponse.json({ authenticated: false, customer: null });
+    return privateJson({ authenticated: false, customer: null });
   }
   const result = await wordpressAccountRequest("auth/me", { token });
   if (result.status !== 200 || !result.data.customer) {
-    const response = NextResponse.json({ authenticated: false, customer: null }, { status: 401 });
+    const response = privateJson({ authenticated: false, customer: null }, 401);
     if (result.status === 401) {
       response.cookies.delete(SESSION_COOKIE);
     }
     return response;
   }
-  return NextResponse.json({ authenticated: true, customer: result.data.customer });
+  return privateJson({ authenticated: true, customer: result.data.customer });
 }
 
 export async function POST(request: NextRequest, { params }: { params: { action: string } }) {
   if (!POST_ACTIONS.has(params.action)) {
-    return NextResponse.json({ ok: false, error: "Not found." }, { status: 404 });
+    return privateJson({ ok: false, error: "Not found." }, 404);
   }
   if (!sameOrigin(request)) {
-    return NextResponse.json({ ok: false, error: "Invalid request origin." }, { status: 403 });
+    return privateJson({ ok: false, error: "Invalid request origin." }, 403);
   }
   if (Number(request.headers.get("content-length") ?? 0) > 32_768) {
-    return NextResponse.json({ ok: false, error: "Request is too large." }, { status: 413 });
+    return privateJson({ ok: false, error: "Request is too large." }, 413);
   }
 
   let body: unknown = {};
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });
+    return privateJson({ ok: false, error: "Invalid request." }, 400);
   }
   const validationError = invalidPayload(params.action, body);
   if (validationError) {
-    return NextResponse.json({ ok: false, error: validationError }, { status: 422 });
+    return privateJson({ ok: false, error: validationError }, 422);
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
@@ -109,10 +110,13 @@ export async function POST(request: NextRequest, { params }: { params: { action:
     token,
     clientIp: clientIp(request),
   });
-  const response = responseBody(result.data, result.status);
-
-  if (params.action === "login" && result.status === 200 && result.data.token && result.data.expiresAt) {
-    const maxAge = Math.max(0, Math.floor((Date.parse(result.data.expiresAt) - Date.now()) / 1000));
+  if (params.action === "login" && result.status === 200) {
+    const expiresAt = result.data.expiresAt ? Date.parse(result.data.expiresAt) : Number.NaN;
+    if (!result.data.token || !/^[a-f0-9]{64}$/i.test(result.data.token) || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      return privateJson({ ok: false, error: "Account service returned an invalid session." }, 502);
+    }
+    const response = responseBody(result.data, result.status);
+    const maxAge = Math.floor((expiresAt - Date.now()) / 1000);
     response.cookies.set(SESSION_COOKIE, result.data.token, {
       httpOnly: true,
       sameSite: "lax",
@@ -120,7 +124,9 @@ export async function POST(request: NextRequest, { params }: { params: { action:
       path: "/",
       maxAge,
     });
+    return response;
   }
+  const response = responseBody(result.data, result.status);
   if (params.action === "logout") {
     response.cookies.delete(SESSION_COOKIE);
   }

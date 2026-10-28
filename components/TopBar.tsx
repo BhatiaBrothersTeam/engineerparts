@@ -16,7 +16,7 @@ export function TopBar() {
           </span>
           <span className="truncate">UAE-wide delivery &amp; collection by appointment</span>
         </div>
-        <Link href="/about" className="truncate text-brand-300 transition-colors hover:text-brand-200 sm:ml-auto">
+        <Link href="/about" className="truncate text-brand-300 transition-colors hover:text-brand-200 sm:hidden lg:ml-auto lg:inline">
           Surplus, dead stock &amp; engineered parts
         </Link>
         {WHATSAPP_NUMBER ? (

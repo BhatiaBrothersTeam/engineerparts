@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { wordpressAccountRequest } from "@/lib/auth-server";
 import { SESSION_COOKIE } from "@/lib/account";
+import { privateJson } from "@/lib/private-response";
 
 type Method = "GET" | "POST" | "PUT";
 type ProxyData = { ok: boolean; error?: string; code?: string; [key: string]: unknown };
@@ -40,15 +41,15 @@ function safeResult(path: string, data: ProxyData): ProxyData {
 async function proxy(request: NextRequest, params: { path?: string[] }, method: Method) {
   const path = routePath(params);
   if (!ALLOWED[method].some((pattern) => pattern.test(path))) {
-    return NextResponse.json({ ok: false, error: "Not found." }, { status: 404 });
+    return privateJson({ ok: false, error: "Not found." }, 404);
   }
   const token = request.cookies.get(SESSION_COOKIE)?.value;
-  if (!token) return NextResponse.json({ ok: false, error: "Authentication required." }, { status: 401 });
+  if (!token) return privateJson({ ok: false, error: "Authentication required." }, 401);
   if (method !== "GET" && !sameOrigin(request)) {
-    return NextResponse.json({ ok: false, error: "Invalid request origin." }, { status: 403 });
+    return privateJson({ ok: false, error: "Invalid request origin." }, 403);
   }
   if (Number(request.headers.get("content-length") ?? 0) > 32_768) {
-    return NextResponse.json({ ok: false, error: "Request is too large." }, { status: 413 });
+    return privateJson({ ok: false, error: "Request is too large." }, 413);
   }
   let body: unknown;
   if (method !== "GET") {
@@ -56,11 +57,11 @@ async function proxy(request: NextRequest, params: { path?: string[] }, method: 
       body = await request.json();
       if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error();
     } catch {
-      return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 422 });
+      return privateJson({ ok: false, error: "Invalid request." }, 422);
     }
   }
   const result = await wordpressAccountRequest<ProxyData>(`account${path ? `/${path}` : ""}`, { method, body, token });
-  const response = NextResponse.json(safeResult(path, result.data), { status: result.status });
+  const response = privateJson(safeResult(path, result.data), result.status);
   if (result.status === 401) response.cookies.delete(SESSION_COOKIE);
   return response;
 }

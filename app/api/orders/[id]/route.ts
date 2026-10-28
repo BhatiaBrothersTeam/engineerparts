@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWooCommerceOrderIfKeyMatches } from "@/lib/woocommerce";
+import { getWooCommerceOrderIfKeyMatches, isValidWooCommerceOrderKey } from "@/lib/woocommerce";
 import { logError } from "@/lib/logger";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const orderId = Number(params.id);
   const orderKey = request.nextUrl.searchParams.get("order_key") ?? "";
 
-  if (!Number.isInteger(orderId) || orderId <= 0 || !orderKey) {
+  if (!Number.isSafeInteger(orderId) || orderId <= 0 || !isValidWooCommerceOrderKey(orderKey)) {
     return NextResponse.json({ ok: false, error: "Invalid order reference." }, { status: 400 });
   }
 

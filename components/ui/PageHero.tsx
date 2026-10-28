@@ -34,7 +34,7 @@ export function PageHero({
           <div className="pointer-events-none absolute -top-24 right-0 h-72 w-72 rounded-full bg-brand-600/20 blur-3xl" aria-hidden="true" />
         </>
       ) : null}
-      <div className="shell relative py-9 lg:py-12">
+      <div className="shell relative py-7 sm:py-9 lg:py-12">
         <Breadcrumbs items={breadcrumbs} light={dark} />
         <div className="mt-5 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
@@ -45,7 +45,7 @@ export function PageHero({
             ) : null}
             <h1
               className={[
-                "mt-2 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl",
+                "text-h1 mt-2",
                 dark ? "text-white" : "text-navy-900",
               ].join(" ")}
             >
@@ -54,7 +54,7 @@ export function PageHero({
             {description ? (
               <p
                 className={[
-                  "mt-4 text-sm leading-relaxed sm:text-base",
+                  "text-lead mt-3",
                   dark ? "text-steel-300" : "text-steel-600",
                 ].join(" ")}
               >
@@ -65,7 +65,7 @@ export function PageHero({
           {children ? <div className="shrink-0">{children}</div> : null}
         </div>
         {stats?.length ? (
-          <div className="mt-7 max-w-xl">
+          <div className="mt-6 max-w-xl sm:mt-7">
             <StatRow stats={stats} />
           </div>
         ) : null}

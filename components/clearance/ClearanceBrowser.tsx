@@ -397,8 +397,8 @@ export function ClearanceBrowser({
         ) : (
           <div
             className={cn(
-              "mt-6 grid gap-5",
-              layout === "grid" ? "sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4" : "grid-cols-1",
+              "mt-6",
+              layout === "grid" ? "product-grid-sidebar" : "grid grid-cols-1 gap-5",
             )}
           >
             {results.map((product) => (

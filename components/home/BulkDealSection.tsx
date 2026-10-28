@@ -67,7 +67,7 @@ export function BulkDealSection() {
     <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
       <div>
         <p className="eyebrow text-signal-500">Bulk quantities &amp; complete lots</p>
-        <h2 className="mt-2 text-2xl font-extrabold leading-tight text-white sm:text-3xl lg:text-[34px]">
+        <h2 className="text-h2 mt-2 text-white">
           Looking for volume or multiple products?
         </h2>
         <p className="mt-3 max-w-lg text-sm leading-relaxed text-steel-300 sm:text-base">

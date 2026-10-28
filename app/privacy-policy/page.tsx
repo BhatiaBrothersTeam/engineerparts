@@ -17,7 +17,7 @@ export default function PrivacyPage() {
         tone="light"
       />
       <section className="section pt-8">
-        <div className="shell prose-sm max-w-3xl space-y-6 text-sm leading-relaxed text-steel-700">
+        <div className="shell reading space-y-6 text-base leading-relaxed text-steel-700">
           <p>
             When you submit an enquiry, bulk request or order, we collect your name, company,
             email, phone, country and the product, lot or equipment references you provide. This
@@ -25,9 +25,15 @@ export default function PrivacyPage() {
             collection or freight.
           </p>
           <p>
-            Analytics events such as product views, searches, add-to-cart, purchases, enquiries,
+            Essential browser storage is used for sign-in, cart, saved-product and checkout
+            functions. These features cannot operate correctly without it.
+          </p>
+          <p>
+            If you allow analytics, events such as product views, searches, add-to-cart, purchases,
             enquiries, WhatsApp clicks and document downloads are recorded in a structured form for
-            future reporting. They do not include payment card details.
+            reporting. They do not include payment card details. Analytics remains disabled when
+            you choose essential storage only, and you can change your choice through Cookie
+            settings in the website footer. We do not currently use advertising cookies.
           </p>
           <p>
             We do not sell personal data. Trade enquiries are used only to confirm stock, logistics

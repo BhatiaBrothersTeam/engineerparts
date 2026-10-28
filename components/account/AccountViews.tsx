@@ -40,7 +40,7 @@ export function OrdersView({ orders }: { orders: CustomerOrder[] }) {
         <article key={order.id} className="card card-interactive grid gap-4 p-4 sm:grid-cols-[1fr_auto] sm:items-center sm:p-5">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-extrabold text-navy-950">Order #{order.number}</h3>
+              <h3 className="text-h4 text-navy-950">Order #{order.number}</h3>
               <OrderStatus status={order.status} />
             </div>
             <p className="mt-2 text-sm text-steel-600">
@@ -64,7 +64,7 @@ export function OrderDetailView({ order }: { order: CustomerOrderDetail }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl font-extrabold text-navy-950">Order #{order.number}</h2>
+              <h2 className="text-h2 text-navy-950">Order #{order.number}</h2>
               <OrderStatus status={order.status} />
             </div>
             <p className="mt-2 text-sm text-steel-600">
@@ -84,7 +84,7 @@ export function OrderDetailView({ order }: { order: CustomerOrderDetail }) {
 
       <section className="card overflow-hidden">
         <div className="border-b border-navy-100 px-5 py-4">
-          <h3 className="font-extrabold text-navy-950">Ordered products</h3>
+          <h3 className="text-h4 text-navy-950">Ordered products</h3>
         </div>
         <ul className="divide-y divide-navy-100">
           {order.items.map((item) => (
@@ -113,7 +113,7 @@ export function OrderDetailView({ order }: { order: CustomerOrderDetail }) {
 
       {order.transactionReference || order.customerNote ? (
         <section className="card p-5 text-sm">
-          <h3 className="font-extrabold text-navy-950">Order information</h3>
+          <h3 className="text-h4 text-navy-950">Order information</h3>
           {order.transactionReference ? (
             <p className="mt-3">
               <span className="font-semibold">Transaction reference:</span> {order.transactionReference}
@@ -153,7 +153,7 @@ export function EnquiriesView({ enquiries }: { enquiries: CustomerEnquiry[] }) {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-wide text-brand-700">{item.reference}</p>
-              <h3 className="mt-1 font-extrabold text-navy-950">{item.productName || item.sku || "General enquiry"}</h3>
+              <h3 className="text-h4 mt-1 text-navy-950">{item.productName || item.sku || "General enquiry"}</h3>
             </div>
             <span className="shrink-0 rounded-full bg-navy-100 px-3 py-1 text-xs font-bold capitalize text-navy-800">
               {item.status.replaceAll("-", " ")}
@@ -214,7 +214,7 @@ function OrderStatus({ status }: { status: string }) {
 function AddressCard({ title, address }: { title: string; address: CustomerAddress }) {
   return (
     <section className="card p-5">
-      <h3 className="font-extrabold text-navy-950">{title}</h3>
+      <h3 className="text-h4 text-navy-950">{title}</h3>
       <address className="mt-3 text-sm not-italic leading-6 text-steel-700">
         {address.firstName} {address.lastName}
         <br />
@@ -258,7 +258,7 @@ function EmptyState({ title, copy, href, action, icon }: { title: string; copy?:
           <IconTile>{icon}</IconTile>
         </div>
       ) : null}
-      <h3 className="mt-4 text-lg font-extrabold text-navy-950">{title}</h3>
+      <h3 className="text-h4 mt-4 text-navy-950">{title}</h3>
       {copy ? <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-steel-600">{copy}</p> : null}
       <Link href={href} className="btn-primary mt-5 inline-flex">
         {action}

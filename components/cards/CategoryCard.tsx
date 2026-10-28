@@ -21,7 +21,7 @@ export function CategoryCard({ category, count }: { category: Category; count: n
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand-200">
             {count} items in clearance
           </p>
-          <h3 className="mt-1 text-lg font-bold leading-tight text-white">{category.name}</h3>
+          <h3 className="text-h4 mt-1 text-white">{category.name}</h3>
         </div>
       </div>
       <div className="flex flex-1 items-start justify-between gap-4 p-4">

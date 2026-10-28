@@ -102,7 +102,7 @@ export default async function AccountPage() {
     <div>
       <div className="mb-6 sm:mb-7">
         <p className="eyebrow text-brand-700">Overview</p>
-        <h2 className="mt-2 text-2xl font-extrabold text-navy-950">Account dashboard</h2>
+        <h2 className="text-h2 mt-2 text-navy-950">Account dashboard</h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-steel-600">
           Jump into orders, enquiries, saved products and your account details.
         </p>
@@ -113,7 +113,7 @@ export default async function AccountPage() {
           <Link key={tile.title} href={tile.href} className="card card-interactive flex items-start gap-4 p-5">
             <IconTile>{tile.icon}</IconTile>
             <div className="min-w-0">
-              <h3 className="text-base font-bold text-navy-900">{tile.title}</h3>
+              <h3 className="text-h4 text-navy-900">{tile.title}</h3>
               <p className="mt-1.5 text-sm leading-relaxed text-steel-600">{tile.copy}</p>
             </div>
           </Link>
@@ -123,7 +123,7 @@ export default async function AccountPage() {
       <div className="mt-7 grid gap-5 xl:grid-cols-2">
         <section className="card p-5 sm:p-6">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-base font-extrabold text-navy-950">Recent orders</h3>
+            <h3 className="text-h4 text-navy-950">Recent orders</h3>
             {orders.length ? (
               <Link href="/account/orders" className="link-underline text-xs font-semibold text-brand-700">
                 View all
@@ -151,7 +151,7 @@ export default async function AccountPage() {
 
         <section className="card p-5 sm:p-6">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-base font-extrabold text-navy-950">Recent enquiries</h3>
+            <h3 className="text-h4 text-navy-950">Recent enquiries</h3>
             {enquiries.length ? (
               <Link href="/account/enquiries" className="link-underline text-xs font-semibold text-brand-700">
                 View all

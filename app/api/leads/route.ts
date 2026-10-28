@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   if (!validLead(payload)) return NextResponse.json({ ok: false, error: "Please complete the required fields, including a valid email and phone number for contact or listing enquiries." }, { status: 422 });
   const result = await wordpressAccountRequest<EnquiryResponse>("enquiries", {
     method: "POST", body: payload, token: request.cookies.get(SESSION_COOKIE)?.value,
-    clientIp: (request.headers.get("x-forwarded-for")?.split(",")[0] ?? request.ip ?? "unknown").trim(),
+    clientIp: request.ip?.trim() || "unknown",
   });
   return NextResponse.json(result.data.ok ? { ok: true, lead_id: result.data.lead_id, received_at: result.data.received_at, admin_email_sent: result.data.admin_email_sent } : { ok: false, error: result.data.error || "Unable to submit your enquiry." }, { status: result.status });
 }

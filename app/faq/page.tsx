@@ -130,25 +130,25 @@ export default function FaqPage() {
         tone="light"
       />
       <section className="section pt-8">
-        <div className="shell max-w-3xl space-y-10">
+        <div className="shell reading space-y-10">
           {FAQ_SECTIONS.map((section) => (
             <div key={section.title}>
               <div className="flex items-center gap-3">
                 {SECTION_ICON[section.title] ? <IconTile>{SECTION_ICON[section.title]}</IconTile> : null}
-                <h2 className="text-lg font-bold text-navy-900">{section.title}</h2>
+                <h2 className="text-h3 text-navy-900">{section.title}</h2>
               </div>
               <div className="mt-4 space-y-4">
                 {section.items.map((item) => (
                   <div key={item.q} className="card card-interactive p-5">
-                    <h3 className="text-sm font-bold text-navy-900">{item.q}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-steel-700">{item.a}</p>
+                    <h3 className="text-h4 text-navy-900">{item.q}</h3>
+                    <p className="mt-2 text-base leading-relaxed text-steel-700">{item.a}</p>
                   </div>
                 ))}
               </div>
             </div>
           ))}
 
-          <div className="rounded-card border border-navy-100 bg-navy-50/50 p-6 text-sm leading-relaxed text-steel-700">
+          <div className="rounded-card border border-navy-100 bg-navy-50/50 p-6 text-base leading-relaxed text-steel-700">
             Still have a question? Use our{" "}
             <a className="underline" href="/contact">contact form</a>
             {CONTACT_EMAIL ? <>, email <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></> : null}, or{" "}

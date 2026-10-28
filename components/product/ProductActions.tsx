@@ -102,7 +102,7 @@ export function ProductActions({ product }: { product: Product }) {
           </p>
           {product.price === null ? <p className="mt-1 text-xs text-steel-500">Price on enquiry.</p> : null}
         </div>
-        <div className="text-right">
+        <div className="sm:text-right">
           <p className="text-xs font-semibold uppercase tracking-wide text-steel-500">
             Quantity available
           </p>
@@ -134,31 +134,30 @@ export function ProductActions({ product }: { product: Product }) {
         </div>
       ) : null}
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <SaveProductButton productId={product.id} className="sm:col-span-2" />
+      <div className="mt-5 grid grid-cols-2 gap-3">
         {wooPurchasable ? (
-          <button type="button" onClick={onWooCommerceCheckout} className="btn-primary sm:col-span-2">
+          <button type="button" onClick={onWooCommerceCheckout} className="btn-primary col-span-2">
             Buy Now
           </button>
         ) : null}
         {purchasable ? (
-          <button type="button" onClick={onAddToCart} className="btn-outline sm:col-span-2">
+          <button type="button" onClick={onAddToCart} className="btn-outline col-span-2">
             Add to Cart
           </button>
         ) : null}
         <button
           type="button"
           onClick={() => openEnquiry({ mode: "product", product })}
-          className={purchasable ? "btn-outline btn-sm" : "btn-navy sm:col-span-2"}
+          className={purchasable ? "btn-outline btn-sm" : "btn-navy col-span-2"}
         >
-          Enquire About This Item
+          {purchasable ? "Enquire" : "Enquire About This Item"}
         </button>
         <button
           type="button"
           onClick={onWhatsApp}
           className={cn(
             "btn border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100",
-            purchasable ? "btn-sm" : "sm:col-span-2",
+            purchasable ? "btn-sm" : "col-span-2",
           )}
         >
           WhatsApp
@@ -167,11 +166,12 @@ export function ProductActions({ product }: { product: Product }) {
           <button
             type="button"
             onClick={() => openEnquiry({ mode: "lot", product })}
-            className="btn-outline sm:col-span-2"
+            className="btn-outline col-span-2"
           >
             Enquire for Whole Lot
           </button>
         ) : null}
+        <SaveProductButton productId={product.id} className="col-span-2" />
       </div>
 
       {product.warehouse_location || product.lead_time ? <ul className="mt-5 space-y-2 border-t border-navy-100 pt-4 text-xs text-steel-600">

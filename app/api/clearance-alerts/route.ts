@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   const result = await wordpressAccountRequest<SubscriptionResponse>("clearance-alerts", {
     method: "POST",
     body: { email },
-    clientIp: (request.headers.get("x-forwarded-for")?.split(",")[0] ?? request.ip ?? "unknown").trim(),
+    clientIp: request.ip?.trim() || "unknown",
   });
   return NextResponse.json(
     result.data.ok ? { ok: true } : { ok: false, error: result.data.error || "Unable to save your email." },

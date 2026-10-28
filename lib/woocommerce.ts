@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHmac, randomBytes } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { unstable_cache } from "next/cache";
 import { products as localProducts } from "@/lib/data/products";
 import type {
@@ -323,8 +323,10 @@ async function getStoreProducts(url: string): Promise<Product[]> {
 }
 
 const getCachedWooProducts = unstable_cache(
-  async (url: string, key: string, secret: string): Promise<Product[]> => {
-    const config = { url, key, secret };
+  async (url: string): Promise<Product[]> => {
+    const credentials = configuration();
+    if (!credentials) throw new Error("WooCommerce configuration is missing.");
+    const config = { url, key: credentials.key, secret: credentials.secret };
     try {
       const [firstPage, currency] = await Promise.all([
         fetchPage(1, config),
@@ -354,7 +356,7 @@ const getCachedWooProducts = unstable_cache(
 export async function getProducts(): Promise<Product[]> {
   const config = configuration();
   if (!config) return localProducts;
-  return getCachedWooProducts(config.url, config.key, config.secret);
+  return getCachedWooProducts(config.url);
 }
 
 export async function getProduct(slug: string): Promise<Product | undefined> {
@@ -889,10 +891,49 @@ export async function getWooCommerceOrder(orderId: number): Promise<WooOrder> {
 
 class OrderNotFoundError extends Error {}
 
+const ORDER_KEY_PATTERN = /^wc_order_[A-Za-z0-9]{10,64}$/;
+const ORDER_LOOKUP_LIMIT = 100;
+const ORDER_LOOKUP_WINDOW_MS = 60_000;
+const ORDER_LOOKUP_BUCKET_LIMIT = 5_000;
+type OrderLookupBucket = { count: number; resetAt: number };
+const orderLookupGlobal = globalThis as unknown as {
+  __engineerpartsOrderLookups?: Map<number, OrderLookupBucket>;
+};
+
+function allowOrderLookup(orderId: number): boolean {
+  const now = Date.now();
+  const buckets = orderLookupGlobal.__engineerpartsOrderLookups ??= new Map();
+  const current = buckets.get(orderId);
+  if (current && current.resetAt > now) {
+    if (current.count >= ORDER_LOOKUP_LIMIT) return false;
+    current.count += 1;
+    return true;
+  }
+  if (buckets.size >= ORDER_LOOKUP_BUCKET_LIMIT) {
+    for (const [id, bucket] of buckets) {
+      if (bucket.resetAt <= now) buckets.delete(id);
+    }
+    if (buckets.size >= ORDER_LOOKUP_BUCKET_LIMIT) {
+      const oldest = buckets.keys().next().value as number | undefined;
+      if (oldest !== undefined) buckets.delete(oldest);
+    }
+  }
+  buckets.set(orderId, { count: 1, resetAt: now + ORDER_LOOKUP_WINDOW_MS });
+  return true;
+}
+
+export function isValidWooCommerceOrderKey(orderKey: string): boolean {
+  return ORDER_KEY_PATTERN.test(orderKey);
+}
+
 export async function getWooCommerceOrderIfKeyMatches(orderId: number, orderKey: string): Promise<WooOrder | null> {
+  if (!Number.isSafeInteger(orderId) || orderId <= 0 || !isValidWooCommerceOrderKey(orderKey)) return null;
+  if (!allowOrderLookup(orderId)) return null;
   try {
     const order = await getWooCommerceOrder(orderId);
-    return order.order_key === orderKey ? order : null;
+    const expected = Buffer.from(order.order_key);
+    const supplied = Buffer.from(orderKey);
+    return expected.length === supplied.length && timingSafeEqual(expected, supplied) ? order : null;
   } catch (error) {
     if (error instanceof OrderNotFoundError) return null;
     throw error;

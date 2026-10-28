@@ -1,3 +1,5 @@
+import { hasAnalyticsConsent } from "@/lib/cookie-consent";
+
 export type AnalyticsEventName =
   | "product_view"
   | "equipment_view"
@@ -35,7 +37,7 @@ declare global {
 }
 
 function push(record: EventRecord) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !hasAnalyticsConsent()) return;
 
   window.engineerpartsAnalytics = window.engineerpartsAnalytics ?? [];
   window.engineerpartsAnalytics.push(record);
@@ -46,22 +48,6 @@ function push(record: EventRecord) {
 
   window.dataLayer = window.dataLayer ?? [];
   window.dataLayer.push({ event: record.name, ...record.payload, ts: record.ts });
-
-  try {
-    const body = JSON.stringify(record);
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon("/api/analytics", new Blob([body], { type: "application/json" }));
-    } else {
-      void fetch("/api/analytics", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-        keepalive: true,
-      }).catch(() => undefined);
-    }
-  } catch {
-    void 0;
-  }
 }
 
 export function track(name: AnalyticsEventName, payload: Record<string, unknown> = {}) {

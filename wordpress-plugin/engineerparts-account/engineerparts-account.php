@@ -2067,7 +2067,11 @@ final class EngineerParts_Customer_Accounts {
 
     private static function client_identifier(WP_REST_Request $request): string {
         $forwarded = sanitize_text_field($request->get_header('x-engineerparts-client-ip'));
-        return $forwarded ?: sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        if ($forwarded && filter_var($forwarded, FILTER_VALIDATE_IP)) {
+            return $forwarded;
+        }
+        $remote = sanitize_text_field($_SERVER['REMOTE_ADDR'] ?? '');
+        return filter_var($remote, FILTER_VALIDATE_IP) ? $remote : 'unknown';
     }
 
     private static function session_token(WP_REST_Request $request): string {

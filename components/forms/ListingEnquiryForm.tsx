@@ -118,7 +118,7 @@ export function ListingEnquiryForm() {
           <MessageIcon />
         </IconTile>
         <div>
-          <h2 className="text-base font-extrabold text-navy-900">Enquiry details</h2>
+          <h2 className="text-h4 text-navy-900">Enquiry details</h2>
           <p className="text-xs text-steel-500">Fields marked * are required.</p>
         </div>
       </div>

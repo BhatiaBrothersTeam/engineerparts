@@ -3,9 +3,9 @@ import Link from "next/link";
 export default function NotFound() {
   return (
     <section className="section">
-      <div className="shell max-w-xl py-16 text-center">
+      <div className="shell max-w-xl py-12 text-center">
         <p className="eyebrow text-brand-600">404</p>
-        <h1 className="mt-3 text-3xl font-extrabold text-navy-900">Listing not found</h1>
+        <h1 className="text-h1 mt-3 text-navy-900">Listing not found</h1>
         <p className="mt-3 text-sm leading-relaxed text-steel-600">
           That page is not in the clearance warehouse. The item may have moved, or the link is out of
           date.

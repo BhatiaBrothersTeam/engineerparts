@@ -55,12 +55,12 @@ export default function ShippingDeliveryPage() {
         tone="light"
       />
       <section className="section pb-0 pt-8">
-        <div className="shell max-w-3xl">
+        <div className="shell reading">
           <div className="grid gap-4 sm:grid-cols-3">
             {HIGHLIGHTS.map((item) => (
               <div key={item.title} className="card p-4">
                 <IconTile>{item.icon}</IconTile>
-                <h2 className="mt-3 text-sm font-bold text-navy-900">{item.title}</h2>
+                <h2 className="text-h4 mt-3 text-navy-900">{item.title}</h2>
                 <p className="mt-1 text-xs leading-relaxed text-steel-600">{item.copy}</p>
               </div>
             ))}
@@ -68,9 +68,9 @@ export default function ShippingDeliveryPage() {
         </div>
       </section>
       <section className="section">
-        <div className="shell prose-sm max-w-3xl space-y-8 text-sm leading-relaxed text-steel-700">
+        <div className="shell prose-sm max-w-5xl space-y-8 text-base leading-relaxed text-steel-700">
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Coverage</h2>
+            <h2 className="text-h3 text-navy-900">Coverage</h2>
             <p className="mt-2">
               We dispatch orders by courier or freight depending on the size, weight and value of the
               items ordered. Delivery availability and lead time depend on your location and on
@@ -79,7 +79,7 @@ export default function ShippingDeliveryPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Timelines</h2>
+            <h2 className="text-h3 text-navy-900">Timelines</h2>
             <p className="mt-2">
               Standard items typically dispatch within 1–3 working days of order confirmation.
               Equipment, lots and large or heavy items may require freight booking and a longer,
@@ -89,7 +89,7 @@ export default function ShippingDeliveryPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Fees</h2>
+            <h2 className="text-h3 text-navy-900">Fees</h2>
             <p className="mt-2">
               Delivery and freight charges are shown at checkout or quoted separately for
               equipment and bulk orders, and depend on destination, weight, volume and service
@@ -99,7 +99,7 @@ export default function ShippingDeliveryPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Delivery attempts</h2>
+            <h2 className="text-h3 text-navy-900">Delivery attempts</h2>
             <p className="mt-2">
               If delivery cannot be completed because no one is available to receive the order,
               the courier or our team will contact you to rearrange delivery. Repeat failed
@@ -109,7 +109,7 @@ export default function ShippingDeliveryPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Stock and substitutions</h2>
+            <h2 className="text-h3 text-navy-900">Stock and substitutions</h2>
             <p className="mt-2">
               If an ordered item becomes unavailable after the order is placed, we will contact you
               before dispatch to offer a refund, a substitute of equivalent specification, or to hold
@@ -118,7 +118,7 @@ export default function ShippingDeliveryPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Checking your delivery</h2>
+            <h2 className="text-h3 text-navy-900">Checking your delivery</h2>
             <p className="mt-2">
               Inspect the shipment against the packing list at the point of delivery where
               possible. Report missing, incorrect or damaged items within 48 hours, as described in
@@ -127,7 +127,7 @@ export default function ShippingDeliveryPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Questions about a delivery</h2>
+            <h2 className="text-h3 text-navy-900">Questions about a delivery</h2>
             <p className="mt-2">
               Contact our team with your order reference{CONTACT_EMAIL ? <> at <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></> : null}
               {CONTACT_PHONE ? <> or call <a className="underline" href={`tel:${CONTACT_PHONE}`}>{CONTACT_PHONE}</a></> : null}, or{" "}

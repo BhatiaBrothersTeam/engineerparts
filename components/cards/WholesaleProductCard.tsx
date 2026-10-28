@@ -3,13 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ConditionPill, ListingBadges, StatusPill } from "@/components/ui/Badge";
-import { useToast } from "@/components/providers/ToastProvider";
+import { useEnquiry } from "@/components/providers/EnquiryProvider";
 import { track } from "@/lib/analytics";
 import type { Product } from "@/lib/types";
-import { CONTACT_EMAIL, absoluteUrl, formatNumber, mailtoLink, productWhatsAppMessage, relativeAdded, whatsappLink } from "@/lib/utils";
+import { absoluteUrl, formatNumber, productWhatsAppMessage, relativeAdded, whatsappLink } from "@/lib/utils";
 
 export function WholesaleProductCard({ product }: { product: Product }) {
-  const { toast } = useToast();
+  const { openEnquiry } = useEnquiry();
 
   const listingUrl = absoluteUrl(`/product/${product.slug}`);
   const message = productWhatsAppMessage({
@@ -18,54 +18,51 @@ export function WholesaleProductCard({ product }: { product: Product }) {
     part_number: product.part_number,
     url: listingUrl,
   });
-  const emailBody = [
-    `Hello Engineerparts.com, I would like to enquire about bulk availability for:`,
-    ``,
-    `Product: ${product.name}`,
-    `SKU: ${product.sku}`,
-    product.part_number ? `Part number: ${product.part_number}` : "",
-    `Listing: ${listingUrl}`,
-    ``,
-    `Quantity required: `,
-  ]
-    .filter(Boolean)
-    .join("\n");
 
   function onWhatsApp() {
     track("whatsapp_click", { source: "WholesaleProductCard", sku: product.sku });
   }
 
-  function onEmail() {
-    track("email_click", { source: "WholesaleProductCard", sku: product.sku });
-    toast(`Drafting an email enquiry for ${product.sku}`);
+  function onEnquire() {
+    openEnquiry({
+      mode: product.listing_type === "Whole Lot" ? "lot" : "product",
+      product,
+      source: "WholesaleProductCard",
+    });
   }
 
   return (
-    <article className="card card-interactive group relative flex h-full flex-col overflow-hidden">
-      <Link href={`/product/${product.slug}`} className="relative block aspect-[4/3] shrink-0 overflow-hidden bg-navy-50">
+    <article className="product-card card card-interactive group relative flex h-full flex-col overflow-hidden">
+      <Link href={`/product/${product.slug}`} className="absolute inset-0 z-0" aria-label={product.name} />
+      <Link
+        href={`/product/${product.slug}`}
+        className="relative z-10 block aspect-[4/3] shrink-0 overflow-hidden bg-navy-50"
+        aria-hidden="true"
+        tabIndex={-1}
+      >
         <Image
           src={product.images[0]}
           alt={product.name}
           fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
           className="object-contain p-2 transition-transform duration-500 group-hover:scale-[1.03]"
         />
         <ListingBadges badges={product.badges} className="absolute left-3 top-3" />
       </Link>
 
-      <div className="flex min-w-0 flex-1 flex-col p-4">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          {product.brand ? <p className="min-w-0 truncate text-[11px] font-bold uppercase tracking-[0.14em] text-brand-700">{product.brand}</p> : null}
+      <div className="product-card-body">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+          {product.brand ? <p className="min-w-0 max-w-full truncate text-[11px] font-bold uppercase tracking-[0.14em] text-brand-700">{product.brand}</p> : null}
           <StatusPill status={product.status} />
         </div>
 
-        <h3 className="mt-2 line-clamp-2 min-h-10 break-words text-[15px] font-bold leading-snug text-navy-900">
-          <Link href={`/product/${product.slug}`} className="hover:text-brand-700">
+        <h3 className="product-card-title">
+          <Link href={`/product/${product.slug}`} className="relative z-10 hover:text-brand-700" aria-hidden="true" tabIndex={-1}>
             {product.name}
           </Link>
         </h3>
 
-        <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+        <dl className="product-card-specs">
           <div className="min-w-0">
             <dt className="text-steel-500">SKU</dt>
             <dd className="truncate font-semibold text-navy-800" title={product.sku}>{product.sku}</dd>
@@ -76,12 +73,12 @@ export function WholesaleProductCard({ product }: { product: Product }) {
               {product.quantity_available === null ? "Contact for quantity" : `${formatNumber(product.quantity_available)} units`}
             </dd>
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0" data-extra>
             <dt className="text-steel-500">Added</dt>
             <dd className="break-words font-semibold text-navy-800">{relativeAdded(product.added_date)}</dd>
           </div>
           {product.warehouse_location ? (
-            <div className="min-w-0">
+            <div className="min-w-0" data-extra>
               <dt className="text-steel-500">Warehouse</dt>
               <dd className="truncate font-semibold text-navy-800">{product.warehouse_location}</dd>
             </div>
@@ -99,7 +96,7 @@ export function WholesaleProductCard({ product }: { product: Product }) {
             </p>
           </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="product-card-actions">
             <a
               href={whatsappLink(message)}
               target="_blank"
@@ -109,19 +106,9 @@ export function WholesaleProductCard({ product }: { product: Product }) {
             >
               WhatsApp
             </a>
-            {CONTACT_EMAIL ? (
-              <a
-                href={mailtoLink(CONTACT_EMAIL, `Bulk enquiry: ${product.name}`, emailBody)}
-                onClick={onEmail}
-                className="btn-outline btn-sm"
-              >
-                Email
-              </a>
-            ) : (
-              <Link href="/enquiry" className="btn-outline btn-sm">
-                Enquire
-              </Link>
-            )}
+            <button type="button" onClick={onEnquire} className="btn-outline btn-sm">
+              Enquire Now
+            </button>
           </div>
         </div>
       </div>

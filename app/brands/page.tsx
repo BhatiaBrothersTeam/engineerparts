@@ -34,7 +34,7 @@ export default async function BrandsPage() {
       <section className="section">
         <div className="shell">
           {brands.length ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="brand-grid">
               {brands.map((brand) => (
                 <BrandCard
                   key={brand.slug}

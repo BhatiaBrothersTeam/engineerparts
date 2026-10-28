@@ -175,7 +175,7 @@ export function EnquiryModal() {
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-navy-100 p-4 sm:p-5">
           <div>
             <p className="eyebrow text-brand-600">Enquiry</p>
-            <h2 id="enquiry-title" className="mt-1 text-xl font-extrabold text-navy-900">{headline}</h2>
+            <h2 id="enquiry-title" className="text-h2 mt-1 text-navy-900">{headline}</h2>
             {contextLabel ? <p className="mt-1 text-sm text-steel-600">{contextLabel}</p> : null}
           </div>
           <button

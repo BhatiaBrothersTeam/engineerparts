@@ -51,12 +51,12 @@ export default function ReturnsRefundsPage() {
         tone="light"
       />
       <section className="section pb-0 pt-8">
-        <div className="shell max-w-3xl">
+        <div className="shell reading">
           <div className="grid gap-4 sm:grid-cols-3">
             {HIGHLIGHTS.map((item) => (
               <div key={item.title} className="card p-4">
                 <IconTile>{item.icon}</IconTile>
-                <h2 className="mt-3 text-sm font-bold text-navy-900">{item.title}</h2>
+                <h2 className="text-h4 mt-3 text-navy-900">{item.title}</h2>
                 <p className="mt-1 text-xs leading-relaxed text-steel-600">{item.copy}</p>
               </div>
             ))}
@@ -64,9 +64,9 @@ export default function ReturnsRefundsPage() {
         </div>
       </section>
       <section className="section">
-        <div className="shell prose-sm max-w-3xl space-y-8 text-sm leading-relaxed text-steel-700">
+        <div className="shell prose-sm max-w-5xl space-y-8 text-base leading-relaxed text-steel-700">
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Return window</h2>
+            <h2 className="text-h3 text-navy-900">Return window</h2>
             <p className="mt-2">
               Unused, resalable items in their original packaging can be returned within 7 days of
               delivery, provided the order reference is quoted. Equipment, lots and made-to-order or
@@ -75,7 +75,7 @@ export default function ReturnsRefundsPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Items that cannot be returned</h2>
+            <h2 className="text-h3 text-navy-900">Items that cannot be returned</h2>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li>Products installed, used or altered after delivery.</li>
               <li>Clearance stock sold as-is where the listing states the item is non-returnable.</li>
@@ -85,7 +85,7 @@ export default function ReturnsRefundsPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Damaged, defective or wrong items</h2>
+            <h2 className="text-h3 text-navy-900">Damaged, defective or wrong items</h2>
             <p className="mt-2">
               Check the shipment against the invoice on arrival. If an item is damaged, defective,
               missing or does not match the order, notify us within 48 hours of delivery with your
@@ -95,7 +95,7 @@ export default function ReturnsRefundsPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Return conditions</h2>
+            <h2 className="text-h3 text-navy-900">Return conditions</h2>
             <p className="mt-2">
               Approved returns must be unused, in their original packaging, with all accessories,
               manuals and freebies included. We may refuse a return that does not meet these
@@ -104,7 +104,7 @@ export default function ReturnsRefundsPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Refunds</h2>
+            <h2 className="text-h3 text-navy-900">Refunds</h2>
             <p className="mt-2">
               Approved refunds are issued to the original payment method, typically within 5–14
               working days of the returned item being received and inspected. Freight, handling and
@@ -113,7 +113,7 @@ export default function ReturnsRefundsPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Return logistics</h2>
+            <h2 className="text-h3 text-navy-900">Return logistics</h2>
             <p className="mt-2">
               Once a return is approved, we will confirm the drop-off or collection arrangement.
               Return freight is charged to the customer unless the fault is ours.
@@ -121,7 +121,7 @@ export default function ReturnsRefundsPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Exchanges</h2>
+            <h2 className="text-h3 text-navy-900">Exchanges</h2>
             <p className="mt-2">
               Exchanges for the same item are offered where stock allows, subject to the conditions
               above.
@@ -129,7 +129,7 @@ export default function ReturnsRefundsPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold text-navy-900">Need help with a return?</h2>
+            <h2 className="text-h3 text-navy-900">Need help with a return?</h2>
             <p className="mt-2">
               Contact our team with your order reference{CONTACT_EMAIL ? <> at <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></> : null}
               {CONTACT_PHONE ? <> or call <a className="underline" href={`tel:${CONTACT_PHONE}`}>{CONTACT_PHONE}</a></> : null}, or{" "}

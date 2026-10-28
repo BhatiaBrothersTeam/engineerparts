@@ -30,14 +30,14 @@ export function SectionHeading({
         ) : null}
         <h2
           className={[
-            "text-2xl font-extrabold leading-tight sm:text-3xl lg:text-[34px]",
+            "text-h2",
             light ? "text-white" : "text-navy-900",
           ].join(" ")}
         >
           {title}
         </h2>
         {description ? (
-          <p className={["mt-3 text-sm leading-relaxed sm:text-base", light ? "text-steel-300" : "text-steel-600"].join(" ")}>
+          <p className={["mt-2 text-base leading-relaxed", light ? "text-steel-300" : "text-steel-600"].join(" ")}>
             {description}
           </p>
         ) : null}

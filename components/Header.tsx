@@ -107,79 +107,114 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
           scrolled && "shadow-header",
         )}
       >
-        <div className="shell flex min-w-0 items-center gap-2 py-3 sm:gap-4 lg:gap-6">
-          <div className="min-w-0 flex-1 lg:hidden">
-            <Logo compact />
-          </div>
-          <div className="hidden lg:block">
-            <Logo />
+        <div className="shell">
+          <div className="flex min-w-0 items-center gap-2 py-3 sm:gap-4 lg:gap-8 lg:py-3.5">
+            <div className="min-w-0 flex-1 lg:hidden">
+              <Logo compact />
+            </div>
+            <div className="hidden shrink-0 lg:block">
+              <Logo />
+            </div>
+
+            <div className="hidden min-w-0 flex-1 lg:block lg:max-w-3xl 2xl:max-w-4xl">
+              <SearchBar />
+            </div>
+
+            <div className="ml-auto flex shrink-0 items-center gap-1.5 lg:gap-1">
+              {authenticated ? (
+                <div
+                  className="relative hidden lg:block"
+                  onMouseEnter={() => setAccountOpen(true)}
+                  onMouseLeave={() => setAccountOpen(false)}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setAccountOpen((open) => !open)}
+                    className="header-action"
+                    aria-haspopup="true"
+                    aria-expanded={accountOpen}
+                    aria-label="My account"
+                  >
+                    <UserIcon />
+                    <span className="hidden max-w-28 truncate xl:inline">{accountLabel}</span>
+                    <ChevronIcon />
+                  </button>
+                  {accountOpen ? (
+                    <div className="absolute right-0 top-full z-50 w-56 animate-fade-in rounded-md border border-navy-100 bg-white p-2 shadow-lift">
+                      <AccountMenuLink href="/account" icon={<UserIcon />}>Dashboard</AccountMenuLink>
+                      <AccountMenuLink href="/account/orders" icon={<ReceiptIcon />}>Orders</AccountMenuLink>
+                      <AccountMenuLink href="/account/enquiries" icon={<InboxIcon />}>Enquiries</AccountMenuLink>
+                      <AccountMenuLink href="/account/saved-products" icon={<HeartIcon />}>Saved Products</AccountMenuLink>
+                      <AccountMenuLink href="/account/profile" icon={<UserIcon />}>Profile</AccountMenuLink>
+                      <button
+                        type="button"
+                        onClick={() => void logout()}
+                        className="mt-1 flex w-full items-center gap-2.5 rounded-md border-t border-navy-100 px-3 pb-1.5 pt-2.5 text-left text-sm font-semibold text-signal-700 hover:bg-navy-50"
+                      >
+                        <LogoutIcon /> Sign out
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <Link href="/login" className="header-action hidden lg:inline-flex" aria-label="Sign in or create account">
+                  <UserIcon />
+                  <span className="hidden xl:inline">Sign in</span>
+                </Link>
+              )}
+
+              <Link href="/enquiry" className="header-action hidden lg:inline-flex" aria-label="Enquiry">
+                <InboxIcon />
+                <span className="hidden xl:inline">Enquiry</span>
+              </Link>
+
+              <Link href="/cart" className="header-action relative hidden lg:inline-flex" aria-label={`Cart, ${count} items`}>
+                <span className="relative">
+                  <CartIcon />
+                  {count > 0 ? <CountBubble count={count} className="-right-3 -top-2.5" /> : null}
+                </span>
+                <span className="hidden xl:inline">Cart</span>
+              </Link>
+
+              <Link
+                href={accountHref}
+                className="hidden h-11 w-11 items-center justify-center rounded-md border border-navy-200 text-navy-800 sm:inline-flex lg:hidden"
+                aria-label={authenticated ? "My account" : "Sign in or create account"}
+              >
+                <UserIcon />
+              </Link>
+
+              <Link
+                href="/cart"
+                className="relative inline-flex h-11 w-11 items-center justify-center rounded-md border border-navy-200 text-navy-800 lg:hidden"
+                aria-label={`Cart, ${count} items`}
+              >
+                <CartIcon />
+                {count > 0 ? <CountBubble count={count} /> : null}
+              </Link>
+
+              <button
+                ref={menuButtonRef}
+                type="button"
+                onClick={() => setMobileOpen((v) => !v)}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-navy-200 text-navy-900 lg:hidden"
+                aria-label="Toggle navigation menu"
+                aria-expanded={mobileOpen}
+              >
+                {mobileOpen ? <CloseIcon /> : <MenuIcon />}
+              </button>
+            </div>
           </div>
 
-          <div className="hidden flex-1 lg:block">
+          <div className="pb-3 lg:hidden">
             <SearchBar />
           </div>
-
-          <div className="ml-auto flex items-center gap-1 lg:gap-2">
-            <HeaderAction
-              href="/enquiry"
-              label="Enquiry"
-              icon={<InboxIcon />}
-              className="hidden xl:flex"
-            />
-            <HeaderAction
-              href="/cart"
-              label="Cart"
-              icon={<CartIcon />}
-              badge={count}
-              className="hidden lg:flex"
-            />
-            {WHATSAPP_NUMBER ? <button
-              type="button"
-              onClick={() => onWhatsApp("Header button")}
-              className="btn hidden h-10 border border-emerald-300 bg-emerald-50 px-3 text-emerald-800 hover:bg-emerald-100 lg:inline-flex"
-              aria-label="Chat on WhatsApp"
-            >
-              <WhatsAppIcon />
-              <span className="text-xs font-semibold">WhatsApp</span>
-            </button> : null}
-            {authenticated ? <div className="relative hidden lg:block" onMouseEnter={() => setAccountOpen(true)} onMouseLeave={() => setAccountOpen(false)}><button type="button" onClick={() => setAccountOpen((open) => !open)} className="btn-signal btn-sm min-w-28" aria-haspopup="true" aria-expanded={accountOpen}><UserIcon /><span className="max-w-28 truncate">{accountLabel}</span></button>{accountOpen ? <div className="absolute right-0 top-full z-50 w-56 rounded-b-md border border-navy-100 bg-white p-2 shadow-lift"><AccountMenuLink href="/account" icon={<UserIcon />}>Dashboard</AccountMenuLink><AccountMenuLink href="/account/orders" icon={<ReceiptIcon />}>Orders</AccountMenuLink><AccountMenuLink href="/account/enquiries" icon={<InboxIcon />}>Enquiries</AccountMenuLink><AccountMenuLink href="/account/saved-products" icon={<HeartIcon />}>Saved Products</AccountMenuLink><AccountMenuLink href="/account/profile" icon={<UserIcon />}>Profile</AccountMenuLink><button type="button" onClick={() => void logout()} className="mt-1 flex w-full items-center gap-2.5 rounded-md border-t border-navy-100 px-3 pt-2.5 pb-1.5 text-left text-sm font-semibold text-signal-700 hover:bg-navy-50"><LogoutIcon /> Sign out</button></div> : null}</div> : <Link href="/login" className="btn-signal btn-sm hidden min-w-28 lg:inline-flex"><UserIcon /><span>Login / Account</span></Link>}
-
-            <Link
-              href={accountHref}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-navy-200 text-navy-800 lg:hidden"
-              aria-label={authenticated ? "My account" : "Sign in or create account"}
-            >
-              <UserIcon />
-            </Link>
-
-            <Link
-              href="/cart"
-              className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-navy-200 text-navy-800 lg:hidden"
-              aria-label={`Cart, ${count} items`}
-            >
-              <CartIcon />
-              {count > 0 ? <CountBubble count={count} /> : null}
-            </Link>
-
-            <button
-              ref={menuButtonRef}
-              type="button"
-              onClick={() => setMobileOpen((v) => !v)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-navy-200 text-navy-900 lg:hidden"
-              aria-label="Toggle navigation menu"
-              aria-expanded={mobileOpen}
-            >
-              {mobileOpen ? <CloseIcon /> : <MenuIcon />}
-            </button>
-          </div>
         </div>
 
-        <div className="shell pb-3 lg:hidden">
-          <SearchBar />
-        </div>
-
-        <nav className="hidden border-t border-navy-100 lg:block">
-          <div className="shell flex items-center gap-1">
+        <div className="hidden border-t border-navy-100 lg:block">
+          <div className="shell flex items-center justify-between gap-6">
+        <nav className="-ml-3 min-w-0" aria-label="Primary">
+          <div className="flex items-center">
             {primaryNav.map((item, index) => (
               <Fragment key={item.label}>
                 {index === 0 ? (
@@ -192,7 +227,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                       type="button"
                       onClick={() => setClearanceOpen((v) => !v)}
                       className={cn(
-                        "flex items-center gap-1.5 border-b-2 px-3.5 py-3.5 text-[13px] font-semibold uppercase tracking-wide transition-colors",
+                        "flex items-center gap-1 border-b-2 px-3 py-3 text-xs font-semibold uppercase tracking-wide transition-colors",
                         isActive(item.href) && !pathname.startsWith("/clearance/")
                           ? "border-brand-600 text-brand-700"
                           : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
@@ -246,7 +281,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                   <Link
                     href={item.href}
                     className={cn(
-                      "border-b-2 px-3.5 py-3.5 text-[13px] font-semibold uppercase tracking-wide transition-colors",
+                      "whitespace-nowrap border-b-2 px-3 py-3 text-xs font-semibold uppercase tracking-wide transition-colors",
                       isActive(item.href)
                         ? "border-brand-600 text-brand-700"
                         : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
@@ -265,7 +300,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                       type="button"
                       onClick={() => setCategoriesOpen((v) => !v)}
                       className={cn(
-                        "flex items-center gap-1.5 border-b-2 px-3.5 py-3.5 text-[13px] font-semibold uppercase tracking-wide transition-colors",
+                        "flex items-center gap-1 border-b-2 px-3 py-3 text-xs font-semibold uppercase tracking-wide transition-colors",
                         pathname.startsWith("/clearance/")
                           ? "border-brand-600 text-brand-700"
                           : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
@@ -313,6 +348,12 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
             ))}
           </div>
         </nav>
+            <p className="hidden shrink-0 items-center gap-2 text-xs font-semibold text-steel-600 xl:flex">
+              <TruckIcon />
+              UAE-wide delivery &amp; collection
+            </p>
+          </div>
+        </div>
       </header>
 
       {mobileOpen ? (
@@ -523,41 +564,21 @@ function AccountMenuLink({ href, icon, children }: { href: string; icon?: React.
   );
 }
 
-function HeaderAction({
-  href,
-  label,
-  icon,
-  badge,
-  className = "",
-}: {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-  badge?: number;
-  className?: string;
-}) {
+function CountBubble({ count, className = "-right-1 -top-1" }: { count: number; className?: string }) {
   return (
-    <Link
-      href={href}
-      className={cn(
-        "group relative inline-flex items-center gap-2 rounded-md border border-transparent px-2.5 py-2 text-navy-800 transition-colors hover:border-navy-200 hover:text-brand-700",
-        className,
-      )}
-    >
-      {icon}
-      <span className="text-xs font-semibold leading-tight">
-        {label}
-        {label === "Cart" ? ` (${badge ?? 0})` : ""}
-      </span>
-    </Link>
+    <span className={cn("absolute flex h-5 min-w-5 items-center justify-center rounded-full bg-signal-600 px-1 text-[10px] font-bold text-white", className)}>
+      {count}
+    </span>
   );
 }
 
-function CountBubble({ count }: { count: number }) {
+function TruckIcon() {
   return (
-    <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-signal-600 px-1 text-[10px] font-bold text-white">
-      {count}
-    </span>
+    <svg className="h-4 w-4 text-brand-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="7.5" cy="18" r="1.6" />
+      <circle cx="17.5" cy="18" r="1.6" />
+    </svg>
   );
 }
 

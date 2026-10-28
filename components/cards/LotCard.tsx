@@ -51,7 +51,7 @@ export function LotCard({ lot }: { lot: Lot }) {
           <StatusPill status={lot.status} />
         </div>
 
-        <h3 className="mt-2 break-words text-[17px] font-bold leading-snug text-navy-900">
+        <h3 className="text-h4 mt-2 break-words text-navy-900">
           <Link href={`/lots/${lot.lot_reference}`} className="hover:text-brand-700">
             {lot.name}
           </Link>

@@ -64,7 +64,7 @@ export default async function BrandPage({ params }: { params: { brand: string } 
           </div>
 
           {items.length ? (
-            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-8 product-grid">
               {items.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

@@ -39,7 +39,7 @@ export default async function RecentlyAddedPage() {
           />
 
           {recentProducts.length ? (
-            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-8 product-grid">
               {recentProducts.map((product) => (
                 <div key={product.id} className="flex h-full flex-col">
                   {product.added_date ? <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-steel-500">
