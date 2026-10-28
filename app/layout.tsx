@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Archivo, Inter } from "next/font/google";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/archivo";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -14,19 +15,6 @@ import { TopBar } from "@/components/TopBar";
 import { CookieConsent } from "@/components/CookieConsent";
 import { categorySummary } from "@/lib/categories";
 import { getProducts } from "@/lib/woocommerce";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-sans",
-});
-
-const archivo = Archivo({
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["500", "600", "700", "800", "900"],
-  variable: "--font-display",
-});
 
 export const metadata: Metadata = {
   title: {
@@ -48,7 +36,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const categories = categorySummary(products);
 
   return (
-    <html lang="en-AE" className={`${inter.variable} ${archivo.variable}`}>
+    <html lang="en-AE">
       <body className="flex min-h-screen flex-col bg-white">
         <ToastProvider>
           <AuthProvider>

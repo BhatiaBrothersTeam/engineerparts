@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/ui/PageHero";
+import { PolicyLayout } from "@/components/ui/PolicyLayout";
 import { CONTACT_EMAIL } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -17,8 +18,8 @@ export default function TermsPage() {
         description="Review the terms that apply before placing an order or submitting an enquiry."
         tone="light"
       />
-      <section className="section pt-8">
-        <div className="shell reading space-y-8 text-base leading-relaxed text-steel-700">
+      <PolicyLayout current="/terms">
+        <div className="policy-grid">
           <div>
             <h2 className="text-h3 text-navy-900">1. Acceptance of terms</h2>
             <p className="mt-2">
@@ -127,7 +128,7 @@ export default function TermsPage() {
             </p>
           </div>
 
-          <div>
+          <div className="policy-wide">
             <h2 className="text-h3 text-navy-900">13. Contact</h2>
             <p className="mt-2">
               Questions about these terms can be sent through our{" "}
@@ -136,7 +137,7 @@ export default function TermsPage() {
             </p>
           </div>
         </div>
-      </section>
+      </PolicyLayout>
     </>
   );
 }

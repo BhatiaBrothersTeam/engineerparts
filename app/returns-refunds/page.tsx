@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/ui/PageHero";
+import { PolicyLayout } from "@/components/ui/PolicyLayout";
 import { IconTile } from "@/components/ui/IconTile";
 import { CONTACT_EMAIL, CONTACT_PHONE, whatsappLink } from "@/lib/utils";
 
@@ -50,21 +51,17 @@ export default function ReturnsRefundsPage() {
         description="What to do if an order arrives damaged, defective, incorrect or otherwise needs to be returned."
         tone="light"
       />
-      <section className="section pb-0 pt-8">
-        <div className="shell reading">
+      <PolicyLayout current="/returns-refunds">
           <div className="grid gap-4 sm:grid-cols-3">
             {HIGHLIGHTS.map((item) => (
               <div key={item.title} className="card p-4">
                 <IconTile>{item.icon}</IconTile>
                 <h2 className="text-h4 mt-3 text-navy-900">{item.title}</h2>
-                <p className="mt-1 text-xs leading-relaxed text-steel-600">{item.copy}</p>
+                <p className="mt-1 text-sm leading-relaxed text-steel-600">{item.copy}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
-      <section className="section">
-        <div className="shell prose-sm max-w-5xl space-y-8 text-base leading-relaxed text-steel-700">
+        <div className="policy-grid mt-4 sm:mt-5">
           <div>
             <h2 className="text-h3 text-navy-900">Return window</h2>
             <p className="mt-2">
@@ -141,7 +138,7 @@ export default function ReturnsRefundsPage() {
             </p>
           </div>
         </div>
-      </section>
+      </PolicyLayout>
     </>
   );
 }

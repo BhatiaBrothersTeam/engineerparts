@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/ui/PageHero";
+import { PolicyLayout } from "@/components/ui/PolicyLayout";
 import { IconTile } from "@/components/ui/IconTile";
 import { CONTACT_EMAIL, CONTACT_PHONE, whatsappLink } from "@/lib/utils";
 
@@ -54,21 +55,17 @@ export default function ShippingDeliveryPage() {
         description="Coverage, timelines and fees for delivery and freight on Engineerparts.com orders."
         tone="light"
       />
-      <section className="section pb-0 pt-8">
-        <div className="shell reading">
+      <PolicyLayout current="/shipping-delivery">
           <div className="grid gap-4 sm:grid-cols-3">
             {HIGHLIGHTS.map((item) => (
               <div key={item.title} className="card p-4">
                 <IconTile>{item.icon}</IconTile>
                 <h2 className="text-h4 mt-3 text-navy-900">{item.title}</h2>
-                <p className="mt-1 text-xs leading-relaxed text-steel-600">{item.copy}</p>
+                <p className="mt-1 text-sm leading-relaxed text-steel-600">{item.copy}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
-      <section className="section">
-        <div className="shell prose-sm max-w-5xl space-y-8 text-base leading-relaxed text-steel-700">
+        <div className="policy-grid mt-4 sm:mt-5">
           <div>
             <h2 className="text-h3 text-navy-900">Coverage</h2>
             <p className="mt-2">
@@ -126,7 +123,7 @@ export default function ShippingDeliveryPage() {
             </p>
           </div>
 
-          <div>
+          <div className="policy-wide">
             <h2 className="text-h3 text-navy-900">Questions about a delivery</h2>
             <p className="mt-2">
               Contact our team with your order reference{CONTACT_EMAIL ? <> at <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></> : null}
@@ -138,7 +135,7 @@ export default function ShippingDeliveryPage() {
             </p>
           </div>
         </div>
-      </section>
+      </PolicyLayout>
     </>
   );
 }

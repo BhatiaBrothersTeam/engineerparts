@@ -44,7 +44,7 @@ const ITEMS = [
 
 export function WhyEngineerparts() {
   return (
-    <div className="mx-auto w-full max-w-7xl">
+    <div className="w-full">
       <SectionHeading
         eyebrow="Why Engineerparts.com"
         title="Built for industrial buyers"

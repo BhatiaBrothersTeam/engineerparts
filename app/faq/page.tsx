@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/ui/PageHero";
+import { PolicyLayout } from "@/components/ui/PolicyLayout";
 import { IconTile } from "@/components/ui/IconTile";
 import { CONTACT_EMAIL, whatsappLink } from "@/lib/utils";
 
@@ -129,15 +130,15 @@ export default function FaqPage() {
         description="Common questions about ordering, delivery, returns and enquiries. Contact us if you can't find what you're looking for."
         tone="light"
       />
-      <section className="section pt-8">
-        <div className="shell reading space-y-10">
+      <PolicyLayout current="/faq">
+        <div className="space-y-10">
           {FAQ_SECTIONS.map((section) => (
             <div key={section.title}>
               <div className="flex items-center gap-3">
                 {SECTION_ICON[section.title] ? <IconTile>{SECTION_ICON[section.title]}</IconTile> : null}
                 <h2 className="text-h3 text-navy-900">{section.title}</h2>
               </div>
-              <div className="mt-4 space-y-4">
+              <div className="mt-4 grid gap-4 xl:grid-cols-2">
                 {section.items.map((item) => (
                   <div key={item.q} className="card card-interactive p-5">
                     <h3 className="text-h4 text-navy-900">{item.q}</h3>
@@ -158,7 +159,7 @@ export default function FaqPage() {
             .
           </div>
         </div>
-      </section>
+      </PolicyLayout>
     </>
   );
 }
