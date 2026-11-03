@@ -88,6 +88,8 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  // /clearance/<category> highlights "Categories"; retail and wholesale belong to "Clearance Stock".
+  const onCategoryPage = pathname.startsWith("/clearance/") && !/^\/clearance\/(retail|wholesale)(\/|$)/.test(pathname);
   const accountHref = authenticated ? "/account" : "/login";
   const accountLabel = loading ? "Account" : authenticated ? customer?.firstName || "My Account" : "Login / Account";
 
@@ -208,7 +210,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
           </div>
         </div>
 
-        <div className="hidden border-t border-navy-100 lg:block">
+        <div className="hidden border-t border-navy-100 bg-navy-50 lg:block">
           <div className="shell flex items-center justify-between gap-6">
         <nav className="-ml-3 min-w-0" aria-label="Primary">
           <div className="flex items-center">
@@ -225,7 +227,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                       onClick={() => setClearanceOpen((v) => !v)}
                       className={cn(
                         "flex items-center gap-1 border-b-2 px-3 py-3 text-xs font-semibold uppercase tracking-wide transition-colors",
-                        isActive(item.href) && !pathname.startsWith("/clearance/")
+                        isActive(item.href) && !onCategoryPage
                           ? "border-brand-600 text-brand-700"
                           : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
                       )}
@@ -298,7 +300,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                       onClick={() => setCategoriesOpen((v) => !v)}
                       className={cn(
                         "flex items-center gap-1 border-b-2 px-3 py-3 text-xs font-semibold uppercase tracking-wide transition-colors",
-                        pathname.startsWith("/clearance/")
+                        onCategoryPage
                           ? "border-brand-600 text-brand-700"
                           : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
                       )}
@@ -430,7 +432,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                           onClick={() => setClearanceExpanded((v) => !v)}
                           className={cn(
                             "flex w-full items-center gap-3 px-4 py-3.5 text-sm font-semibold uppercase tracking-wide transition-colors",
-                            active && !pathname.startsWith("/clearance/") ? "bg-brand-50 text-brand-700" : "text-navy-900 hover:bg-navy-50",
+                            active && !onCategoryPage ? "bg-brand-50 text-brand-700" : "text-navy-900 hover:bg-navy-50",
                           )}
                           aria-expanded={clearanceExpanded}
                         >
@@ -438,7 +440,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                             <span
                               className={cn(
                                 "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
-                                active && !pathname.startsWith("/clearance/") ? "bg-brand-600 text-white" : "bg-navy-900 text-white",
+                                active && !onCategoryPage ? "bg-brand-600 text-white" : "bg-navy-900 text-white",
                               )}
                               aria-hidden="true"
                             >
@@ -496,7 +498,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                           onClick={() => setCategoriesExpanded((v) => !v)}
                           className={cn(
                             "flex w-full items-center gap-3 px-4 py-3.5 text-sm font-semibold uppercase tracking-wide transition-colors",
-                            pathname.startsWith("/clearance/")
+                            onCategoryPage
                               ? "bg-brand-50 text-brand-700"
                               : "text-navy-900 hover:bg-navy-50",
                           )}
@@ -505,7 +507,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                           <span
                             className={cn(
                               "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
-                              pathname.startsWith("/clearance/") ? "bg-brand-600 text-white" : "bg-navy-900 text-white",
+                              onCategoryPage ? "bg-brand-600 text-white" : "bg-navy-900 text-white",
                             )}
                             aria-hidden="true"
                           >
@@ -563,7 +565,7 @@ function AccountMenuLink({ href, icon, children }: { href: string; icon?: React.
 
 function CountBubble({ count, className = "-right-1 -top-1" }: { count: number; className?: string }) {
   return (
-    <span className={cn("absolute flex h-5 min-w-5 items-center justify-center rounded-full bg-signal-600 px-1 text-[10px] font-bold text-white", className)}>
+    <span className={cn("absolute flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white", className)}>
       {count}
     </span>
   );

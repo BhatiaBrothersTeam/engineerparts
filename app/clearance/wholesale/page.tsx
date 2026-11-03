@@ -78,7 +78,7 @@ export default async function WholesaleClearancePage() {
         </div>
       </section>
 
-      <section className="section border-y border-navy-800 bg-navy-950">
+      <section className="section border-y border-navy-100 bg-navy-50">
         <div className="shell">
           <BulkDealSection />
         </div>

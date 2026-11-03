@@ -44,7 +44,7 @@ export default async function HomePage() {
       <section className="border-b border-navy-100 bg-white">
         <div className="shell grid grid-cols-[minmax(0,1fr)] items-stretch gap-7 py-7 sm:gap-8 sm:py-10 lg:grid-cols-2 lg:gap-12 lg:py-12">
           <div className="min-w-0 flex flex-col justify-center">
-            <p className="eyebrow text-brand-600">Engineerparts.com &middot; Product catalogue</p>
+            <p className="eyebrow text-brand-600">Engineer Parts &nbsp;|&nbsp; Industrial supplier</p>
             <h1 className="text-display mt-4 text-navy-900">
               Industrial parts.
               <br />
@@ -96,7 +96,7 @@ export default async function HomePage() {
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-navy-950/85 via-navy-950/25 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-brand-900/90 via-brand-900/25 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-4 sm:p-7">
               <StatRow stats={inventoryStats} />
               <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-brand-200">
@@ -136,7 +136,7 @@ export default async function HomePage() {
         </div>
       </section> : null}
 
-      <section className="section border-y border-navy-800 bg-navy-950">
+      <section className="section border-y border-navy-100 bg-navy-50">
         <div className="shell">
           <BulkDealSection />
         </div>

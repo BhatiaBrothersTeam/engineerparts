@@ -29,6 +29,7 @@ export const metadata: Metadata = {
     title: "Engineerparts.com | Industrial products",
     description: "Browse products from the live Engineerparts.com catalogue.",
     type: "website",
+    images: [{ url: "/engineer-parts-logo.svg", width: 800, height: 456, alt: "Engineer Parts" }],
   },
 };
 

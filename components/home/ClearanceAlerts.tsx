@@ -33,8 +33,8 @@ export function ClearanceAlerts() {
   return (
     <div>
       <div>
-        <h2 className="eyebrow text-white">Clearance alerts. No spam.</h2>
-        <p className="mt-3 text-xs leading-relaxed text-steel-400">
+        <h2 className="eyebrow text-navy-900">Clearance alerts. No spam.</h2>
+        <p className="mt-3 text-xs leading-relaxed text-steel-600">
           Sign up for the latest clearance stock and new arrivals.
         </p>
       </div>
@@ -45,8 +45,8 @@ export function ClearanceAlerts() {
           </div>
         ) : (
           <>
-          <label htmlFor={`${errorId}-email`} className="mb-2 block text-xs text-steel-300">Email address <span className="text-brand-300">*</span> (required)</label>
-          <form onSubmit={onSubmit} className="flex rounded-full border border-white/20 bg-white p-1 text-navy-900 shadow-sm transition-colors hover:border-white/50 focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-400/40">
+          <label htmlFor={`${errorId}-email`} className="mb-2 block text-xs text-steel-700">Email address <span className="text-brand-600">*</span> (required)</label>
+          <form onSubmit={onSubmit} className="flex rounded-full border border-navy-200 bg-white p-1 text-navy-900 shadow-sm transition-colors hover:border-brand-300 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/30">
             <input
               id={`${errorId}-email`}
               type="email"
@@ -79,7 +79,7 @@ export function ClearanceAlerts() {
           </form>
           </>
         )}
-        {error ? <p id={errorId} role="alert" className="mt-2 text-xs text-brand-300">{error}</p> : null}
+        {error ? <p id={errorId} role="alert" className="mt-2 text-xs text-brand-700">{error}</p> : null}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import type { ConditionGrade, ListingBadge, ProductStatus } from "@/lib/types";
 import { conditionTone, statusStyle } from "@/lib/utils";
 
 const BADGE_TONE: Record<ListingBadge, string> = {
-  CLEARANCE: "bg-signal-600 text-white",
+  CLEARANCE: "bg-brand-600 text-white",
   SURPLUS: "bg-navy-900 text-white",
   "AGED STOCK": "bg-steel-700 text-white",
   LOT: "bg-brand-700 text-white",

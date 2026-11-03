@@ -18,17 +18,17 @@ export function Footer({ categories = [] }: { categories?: CategorySummaryItem[]
   const footerCategories = categories.slice(0, MAX_FOOTER_CATEGORIES);
 
   return (
-    <footer className="border-t border-navy-800 bg-navy-950 text-steel-300">
+    <footer className="border-t border-navy-100 bg-navy-50 text-steel-600">
       <div className="shell pb-24 pt-10 sm:py-12">
         <div className="max-w-sm">
-          <Logo light />
-          <p className="mt-5 text-sm leading-6 text-steel-300">
+          <Logo />
+          <p className="mt-5 text-sm leading-6 text-steel-600">
             Industrial equipment, spare parts, tools and clearance stock for business buyers.
           </p>
-          <p className="mt-3 text-xs font-bold uppercase leading-5 tracking-wide text-brand-400">
+          <p className="mt-3 text-xs font-bold uppercase leading-5 tracking-wide text-brand-600">
             Surplus stock, dead stock &amp; engineered parts
           </p>
-          <Link href="/enquiry" className="btn-signal btn-sm mt-4">
+          <Link href="/enquiry" className="btn-primary btn-sm mt-4">
             Request a Quote
           </Link>
         </div>
@@ -78,18 +78,18 @@ export function Footer({ categories = [] }: { categories?: CategorySummaryItem[]
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-5 border-t border-navy-800 pt-5 text-[11px] leading-relaxed sm:mt-14 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-10 flex flex-col gap-5 border-t border-navy-200 pt-5 text-[11px] leading-relaxed sm:mt-14 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-            {CONTACT_EMAIL ? <a className="break-all hover:text-white hover:underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> : null}
-            {CONTACT_PHONE ? <a className="hover:text-white hover:underline" href={`tel:${CONTACT_PHONE}`}>{CONTACT_PHONE}</a> : null}
+            {CONTACT_EMAIL ? <a className="break-all hover:text-brand-700 hover:underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> : null}
+            {CONTACT_PHONE ? <a className="hover:text-brand-700 hover:underline" href={`tel:${CONTACT_PHONE}`}>{CONTACT_PHONE}</a> : null}
             {WHATSAPP_NUMBER ? (
-              <a href={whatsappLink("")} target="_blank" rel="noopener noreferrer" onClick={onWhatsApp} className="hover:text-white hover:underline">
+              <a href={whatsappLink("")} target="_blank" rel="noopener noreferrer" onClick={onWhatsApp} className="hover:text-brand-700 hover:underline">
                 WhatsApp
               </a>
             ) : null}
             <button
               type="button"
-              className="hover:text-white hover:underline"
+              className="hover:text-brand-700 hover:underline"
               onClick={() => window.dispatchEvent(new Event(OPEN_COOKIE_SETTINGS_EVENT))}
             >
               Cookie settings
@@ -108,11 +108,11 @@ export function Footer({ categories = [] }: { categories?: CategorySummaryItem[]
 function FooterColumn({ title, links }: { title: string; links: { label: string; href: string }[] }) {
   return (
     <div>
-      <h2 className="eyebrow text-white">{title}</h2>
+      <h2 className="eyebrow text-navy-900">{title}</h2>
       <ul className="mt-3 space-y-2 text-xs leading-relaxed">
         {links.map((link) => (
           <li key={`${link.href}-${link.label}`}>
-            <Link href={link.href} className="transition-colors hover:text-white hover:underline">
+            <Link href={link.href} className="transition-colors hover:text-brand-700 hover:underline">
               {link.label}
             </Link>
           </li>

@@ -157,7 +157,7 @@
   }
 
   .btn-signal {
-    @apply btn bg-signal-600 text-white hover:bg-signal-700;
+    @apply btn bg-brand-600 text-white hover:bg-brand-700;
   }
 
   .btn-outline {
@@ -234,7 +234,7 @@
   }
 
   .stat-tile {
-    @apply rounded-md border border-white/10 bg-navy-950/70 px-3.5 py-3 backdrop-blur-md;
+    @apply rounded-md border border-white/15 bg-brand-900/80 px-3.5 py-3 backdrop-blur-md;
   }
 
   /* Keep catalogue cards at a consistent browsing width on larger screens. */
