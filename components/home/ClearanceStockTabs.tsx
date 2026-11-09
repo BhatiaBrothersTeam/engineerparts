@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ProductCard } from "@/components/cards/ProductCard";
+import { RevealGroup } from "@/components/ui/Reveal";
 import type { Product } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -46,11 +47,11 @@ export function ClearanceStockTabs({ productsByTab }: { productsByTab: Record<Ta
         </Link>
       </div>
 
-      <div className="product-grid-showcase">
+      <RevealGroup className="product-grid-showcase">
         {list.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
-      </div>
+      </RevealGroup>
 
       <div className="mt-6 flex justify-center sm:hidden">
         <Link href="/clearance" className="btn-outline">

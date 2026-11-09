@@ -14,7 +14,7 @@ export default function EnquiryPage() {
     <>
       <PageHero
         breadcrumbs={[{ label: "Enquiry" }]}
-        eyebrow="Clearance desk"
+        eyebrow="Our team"
         title="Submit an enquiry"
         description="Tell us what products, lots or equipment you need. Add a SKU or reference if you have one."
       />

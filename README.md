@@ -12,6 +12,16 @@ Engineerparts is a responsive industrial marketplace built with Next.js. It prov
 - Browser `localStorage` for the cart and client-side enquiry history
 - WordPress/WooCommerce customer authentication through secure server-side proxying
 
+## Animation
+
+Existing CSS provides route entrances and responsive card interactions. GSAP ScrollTrigger
+provides section reveals and desktop hero parallax, synchronized with Lenis desktop wheel
+scrolling; Motion provides subtle hero-button interactions. These enhancements respect
+reduced motion, and nested/dialog scrolling and native anchors remain available.
+Three.js and Lottie are installed for future suitable experiences but are not loaded
+globally. Project Copilot instructions and repeatable animation workflows live in
+`.github/instructions` and `.github/skills`.
+
 Checkout accepts non-empty first and last names, including single-character names and initials. Customer carts are saved separately by customer ID in this browser. Successful sign-out hides the customer's cart and resets quoted totals and the checkout retry reference across open tabs; signing back into the same account restores its saved items. Other customers cannot see that cart through the storefront. Guest items merge into the customer's saved cart on sign-in, capped by stock, and are no longer shown after logout. Explicit cart clearing and confirmed checkout remove the active saved items. History-restored pages reload the current browser cart. Carts do not sync across devices and are lost if site storage is cleared; carts permanently deleted by the previous logout behavior cannot be recovered.
 
 Customer-facing forms mark mandatory fields with an asterisk (*) and explain the marker; optional fields remain unmarked. They identify missing or invalid fields and preserve entered values after failures. Account, checkout, enquiry and subscription requests use safe recovery messages for expired sessions, rate limits, CAPTCHA failures and connectivity problems; internal service details are logged rather than displayed. Uncertain order/payment outcomes instruct customers to check the existing order before retrying. Run the focused regression checks with `node --test scripts/test-checkout-logout.cjs`.

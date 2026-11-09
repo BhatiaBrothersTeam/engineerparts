@@ -23,7 +23,7 @@ export default async function WholesaleClearancePage() {
         breadcrumbs={[{ label: "Clearance Stock", href: "/clearance" }, { label: "Wholesale" }]}
         eyebrow="Clearance stock · Wholesale"
         title="Wholesale & bulk clearance stock"
-        description="All clearance and surplus stock, available for bulk enquiry. Pricing is not published online — enquire directly by WhatsApp or the enquiry form and our clearance desk will confirm availability and rates."
+        description="All clearance and surplus stock, available for bulk enquiry. Pricing is not published online — enquire directly by WhatsApp or the enquiry form and our team will confirm availability and rates."
         stats={[[formatNumber(wholesale.length), "Listings"]]}
       />
 

@@ -248,7 +248,11 @@ async function fetchPage(page: number, config: NonNullable<ReturnType<typeof con
 
   const headers = authorizeRequest(url, config);
 
-  const response = await fetch(url, { headers, next: { revalidate: 300 } });
+  const response = await fetch(url, {
+    headers,
+    next: { revalidate: 300 },
+    signal: AbortSignal.timeout(15000),
+  });
 
   if (!response.ok) {
     throw new Error(`WooCommerce products request failed (${response.status} ${response.statusText})`);
@@ -263,7 +267,7 @@ async function fetchPage(page: number, config: NonNullable<ReturnType<typeof con
 async function fetchStorePage(page: number, url: string) {
   const response = await fetch(
     `${url}/wp-json/wc/store/v1/products?per_page=100&page=${page}`,
-    { next: { revalidate: 300 } },
+    { next: { revalidate: 300 }, signal: AbortSignal.timeout(15000) },
   );
 
   if (!response.ok) {
@@ -302,7 +306,7 @@ async function fetchStoreCurrency(url: string): Promise<string> {
   try {
     const response = await fetch(
       `${url}/wp-json/wc/store/v1/products?per_page=1`,
-      { next: { revalidate: 300 } },
+      { next: { revalidate: 300 }, signal: AbortSignal.timeout(15000) },
     );
     if (!response.ok) return "";
     const products = (await response.json()) as WooStoreProduct[];

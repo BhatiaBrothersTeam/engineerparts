@@ -47,7 +47,7 @@ export function OrdersView({ orders }: { orders: CustomerOrder[] }) {
             <p className="mt-2 text-sm text-steel-600">
               {formatDate(order.date)} &middot; {order.itemCount} {order.itemCount === 1 ? "item" : "items"} &middot; {formatPrice(order.total, order.currency)}
             </p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-steel-500">Payment: {order.paymentStatus === "pay-on-delivery" ? "Pay on delivery" : order.paymentStatus}</p>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-steel-500">Payment: {order.paymentStatus === "pay-on-delivery" ? "Pay on delivery" : order.paymentStatus === "unpaid" ? "Not completed" : order.paymentStatus}</p>
           </div>
           <Link href={`/account/orders/${order.id}`} className="btn-outline btn-sm sm:justify-self-end">
             View details

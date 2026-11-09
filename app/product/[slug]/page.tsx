@@ -27,9 +27,19 @@ function categoryLabel(slug: string): string {
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const product = await getProduct(params.slug);
   if (!product) return { title: "Product not found" };
+  const title = `${product.name} - ${product.sku}`;
+  const description = `${product.condition !== "Not provided" ? `${product.condition}. ` : ""}${product.quantity_available === null ? "Contact for quantity" : `${formatNumber(product.quantity_available)} units available`}. Clearance stock from Engineerparts.com.`;
   return {
-    title: `${product.name} - ${product.sku}`,
-    description: `${product.condition !== "Not provided" ? `${product.condition}. ` : ""}${product.quantity_available === null ? "Contact for quantity" : `${formatNumber(product.quantity_available)} units available`}. Clearance stock from Engineerparts.com.`,
+    title,
+    description,
+    alternates: { canonical: `/product/${product.slug}` },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: `/product/${product.slug}`,
+      images: product.images[0] ? [{ url: product.images[0], alt: product.name }] : undefined,
+    },
   };
 }
 
@@ -59,9 +69,50 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const stockRows = [
     ["Listed", product.added_date ? formatDate(product.added_date) : "Not provided"],
   ].filter(([, value]) => isPublicProductValue(value));
+  const productUrl = `https://engineerparts.com/product/${product.slug}`;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Product",
+        name: product.name,
+        sku: product.sku,
+        url: productUrl,
+        ...(isPublicProductValue(product.description) ? { description: product.description } : {}),
+        ...(product.images.length ? { image: product.images } : {}),
+        ...(isPublicProductValue(product.brand, "brand") ? { brand: { "@type": "Brand", name: product.brand } } : {}),
+        ...(product.price !== null
+          ? {
+              offers: {
+                "@type": "Offer",
+                price: product.price,
+                priceCurrency: product.currency || "AED",
+                availability: product.status === "Sold" || product.status === "Reserved"
+                  ? "https://schema.org/OutOfStock"
+                  : "https://schema.org/InStock",
+                url: productUrl,
+              },
+            }
+          : {}),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: "https://engineerparts.com" },
+          { "@type": "ListItem", position: 2, name: "Clearance Stock", item: "https://engineerparts.com/clearance" },
+          { "@type": "ListItem", position: 3, name: categoryLabel(product.category), item: `https://engineerparts.com/clearance/${product.category}` },
+          { "@type": "ListItem", position: 4, name: product.name, item: productUrl },
+        ],
+      },
+    ],
+  };
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
+      />
       <TrackView
         event="product_view"
         payload={{ sku: product.sku, name: product.name, price: product.price, status: product.status }}

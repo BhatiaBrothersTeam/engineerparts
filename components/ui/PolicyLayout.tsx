@@ -49,7 +49,7 @@ export function PolicyLayout({ current, children }: { current: string; children:
           <div className="card mt-4 hidden p-5 lg:block">
             <p className="text-h4 text-navy-900">Need help?</p>
             <p className="mt-1.5 text-sm leading-relaxed text-steel-600">
-              Our clearance desk replies within one working day.
+              Our team replies within one working day.
             </p>
             <div className="mt-4 grid gap-2">
               <Link href="/contact" className="btn-primary btn-sm">

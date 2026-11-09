@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       sessionResolved.current = true;
       setCustomer(null);
       setLoading(false);
+      toast("You have been signed out successfully.");
       router.push("/");
       router.refresh();
     } catch (error) {

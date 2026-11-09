@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { ClearanceAlerts } from "@/components/home/ClearanceAlerts";
+import { Reveal } from "@/components/ui/Reveal";
 import { track } from "@/lib/analytics";
 import type { CategorySummaryItem } from "@/lib/categories";
 import { CONTACT_EMAIL, CONTACT_PHONE, WHATSAPP_NUMBER, whatsappLink } from "@/lib/utils";
@@ -19,17 +20,20 @@ export function Footer({ categories = [] }: { categories?: CategorySummaryItem[]
 
   return (
     <footer className="border-t border-navy-100 bg-navy-50 text-steel-600">
-      <div className="shell pb-24 pt-10 sm:py-12">
+      <Reveal className="shell pb-24 pt-10 sm:py-12">
         <div className="max-w-sm">
-          <Logo />
+          <Logo large />
           <p className="mt-5 text-sm leading-6 text-steel-600">
             Industrial equipment, spare parts, tools and clearance stock for business buyers.
+          </p>
+          <p className="mt-2 text-sm leading-6 text-steel-600">
+            UAE-wide delivery; collection by appointment.
           </p>
           <p className="mt-3 text-xs font-bold uppercase leading-5 tracking-wide text-brand-600">
             Surplus stock, dead stock &amp; engineered parts
           </p>
           <Link href="/enquiry" className="btn-primary btn-sm mt-4">
-            Request a Quote
+            Enquire Now
           </Link>
         </div>
 
@@ -100,7 +104,7 @@ export function Footer({ categories = [] }: { categories?: CategorySummaryItem[]
             <p className="text-steel-400">Surplus stock, dead stock and engineered parts.</p>
           </div>
         </div>
-      </div>
+      </Reveal>
     </footer>
   );
 }

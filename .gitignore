@@ -19,6 +19,7 @@ CLAUDE.md
 *.code-workspace
 engineerparts-customer-accounts-1.8.2
 docs
+.env-vvsgrocer
 
 # macOS
 **/.DS_Store

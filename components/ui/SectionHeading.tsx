@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Reveal } from "@/components/ui/Reveal";
 
 export function SectionHeading({
   eyebrow,
@@ -16,12 +17,13 @@ export function SectionHeading({
   align?: "left" | "center";
 }) {
   return (
-    <div
+    <Reveal>
+      <div
       className={[
         "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between",
         align === "center" ? "text-center sm:text-left" : "",
       ].join(" ")}
-    >
+      >
       <div className={align === "center" ? "mx-auto max-w-2xl sm:mx-0" : "max-w-2xl"}>
         {eyebrow ? (
           <p className={["eyebrow mb-2", light ? "text-brand-300" : "text-brand-600"].join(" ")}>
@@ -56,6 +58,7 @@ export function SectionHeading({
           </span>
         </Link>
       ) : null}
-    </div>
+      </div>
+    </Reveal>
   );
 }

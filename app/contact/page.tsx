@@ -18,7 +18,7 @@ export default function ContactPage() {
     
       <PageHero
         breadcrumbs={[{ label: "Contact Us" }]}
-        eyebrow="Clearance desk"
+        eyebrow="Our team"
         title="Contact Us"
         description="Send our team a general message. For a specific product, lot or equipment request, use the enquiry option on its listing."
       />

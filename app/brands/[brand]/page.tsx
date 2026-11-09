@@ -16,6 +16,13 @@ export async function generateMetadata({ params }: { params: { brand: string } }
   return {
     title: `${brand.name} clearance stock`,
     description: brand.description,
+    alternates: { canonical: `/brands/${brand.slug}` },
+    openGraph: {
+      title: `${brand.name} clearance stock`,
+      description: brand.description,
+      url: `/brands/${brand.slug}`,
+      type: "website",
+    },
   };
 }
 
@@ -25,9 +32,33 @@ export default async function BrandPage({ params }: { params: { brand: string } 
   if (!brand) notFound();
 
   const items = productsForBrand(products, brand.slug);
+  const brandUrl = `https://engineerparts.com/brands/${brand.slug}`;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        name: `${brand.name} clearance stock`,
+        url: brandUrl,
+        description: brand.description,
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: "https://engineerparts.com" },
+          { "@type": "ListItem", position: 2, name: "Brands", item: "https://engineerparts.com/brands" },
+          { "@type": "ListItem", position: 3, name: brand.name, item: brandUrl },
+        ],
+      },
+    ],
+  };
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
+      />
       <TrackView event="brand_view" payload={{ brand: brand.slug, count: items.length }} />
       <PageHero
         breadcrumbs={[{ label: "Brands", href: "/brands" }, { label: brand.name }]}

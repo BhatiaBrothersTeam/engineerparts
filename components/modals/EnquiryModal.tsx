@@ -199,7 +199,7 @@ export function EnquiryModal() {
               <p className="mt-1.5 text-sm text-emerald-800">
                 Your reference is{" "}
                 <span className="font-mono font-semibold">{submitted}</span>. A member of the
-                Engineerparts.com clearance desk will respond during the next working day.
+                Engineerparts.com team will respond during the next working day.
               </p>
             </div>
             <dl className="mt-5 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">

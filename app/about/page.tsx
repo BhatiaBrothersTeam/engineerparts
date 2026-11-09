@@ -5,7 +5,7 @@ import { WhyEngineerparts } from "@/components/home/WhyEngineerparts";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "Learn about Engineerparts.com and browse industrial products, spare parts, tools and clearance stock.",
+  description: "Learn how Engineerparts.com helps business buyers find industrial products, spare parts, tools and clearance stock.",
 };
 
 export default function AboutPage() {
@@ -19,23 +19,50 @@ export default function AboutPage() {
       />
 
       <section className="section">
-        <div className="shell reading">
-          <div>
+        <div className="shell grid gap-8 lg:grid-cols-2 lg:gap-12">
+          <div className="reading">
             <p className="eyebrow text-brand-600">Who we are</p>
             <h2 className="text-h2 mt-2 text-navy-900">
-              Industrial products for business buyers
+              Company overview
             </h2>
             <p className="mt-4 text-base leading-relaxed text-steel-700">
-              Engineerparts.com helps businesses browse industrial equipment, spare parts, tools and engineering products, including available clearance stock.
+              Engineerparts.com helps business buyers browse industrial equipment, spare parts, tools and engineering products, including available clearance stock.
             </p>
             <p className="mt-3 text-base leading-relaxed text-steel-700">
-              We deal in surplus stock, dead stock and engineered parts &mdash; aged and clearance inventory offered
-              individually at retail or in bulk quantities for wholesale buyers.
-            </p>
-            <p className="mt-3 text-base leading-relaxed text-steel-700">
-              Review the information published with each listing, buy eligible items online, or contact our team when you need more details before making a decision.
+              Listings can be purchased online where available or sent to our team as a product, equipment or bulk enquiry.
             </p>
           </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <article className="card p-5 sm:p-6">
+              <h3 className="text-h3 text-navy-900">Our mission</h3>
+              <p className="mt-3 text-sm leading-relaxed text-steel-600">
+                Make industrial products and available clearance stock easier for businesses to discover and source.
+              </p>
+            </article>
+            <article className="card p-5 sm:p-6">
+              <h3 className="text-h3 text-navy-900">Our vision</h3>
+              <p className="mt-3 text-sm leading-relaxed text-steel-600">
+                Help businesses find parts and equipment they need, including surplus and clearance inventory.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="section section-alt">
+        <div className="shell grid gap-4 sm:grid-cols-2">
+          <article className="card p-5 sm:p-6">
+            <h2 className="text-h3 text-navy-900">Our inventory</h2>
+            <p className="mt-3 text-base leading-relaxed text-steel-700">
+              Browse industrial equipment, spare parts, tools and clearance stock. Listings show current product information; availability and quantities can change, so contact us to confirm before ordering.
+            </p>
+          </article>
+          <article className="card p-5 sm:p-6">
+            <h2 className="text-h3 text-navy-900">Quality assurance</h2>
+            <p className="mt-3 text-base leading-relaxed text-steel-700">
+              Products are organised by category and brand. Condition, specifications, quantity and location are shown when those details are available for a listing. Ask our team to confirm item-specific details or arrange an inspection before purchase.
+            </p>
+          </article>
         </div>
       </section>
 
@@ -46,20 +73,20 @@ export default function AboutPage() {
       </section>
 
       <section className="section">
-        <div className="shell grid gap-10 lg:grid-cols-2">
+        <div className="shell grid gap-8 lg:grid-cols-2 lg:gap-12">
           <div>
-            <h2 className="text-h2 text-navy-900">How listings work</h2>
-            <ul className="mt-5 space-y-3 text-base leading-relaxed text-steel-700">
-              <li>Product listings show available information, pricing and stock details.</li>
-              <li>Stock quantity is shown when it is available for a listing.</li>
-              <li>Condition, location and lead time are shown only when supplied.</li>
-              <li>Products without enough information remain available for enquiry.</li>
-            </ul>
+            <p className="eyebrow text-brand-600">Logistics &amp; delivery</p>
+            <h2 className="text-h2 mt-2 text-navy-900">From enquiry to collection or delivery</h2>
+            <ol className="mt-5 space-y-4 text-base leading-relaxed text-steel-700">
+              <li><span className="font-semibold text-navy-900">1. Share your requirement.</span> Include the product reference, quantity and destination.</li>
+              <li><span className="font-semibold text-navy-900">2. Confirm the order.</span> Our team checks availability and discusses the applicable price and delivery options.</li>
+              <li><span className="font-semibold text-navy-900">3. Arrange fulfilment.</span> UAE-wide delivery and collection by appointment are available; confirm arrangements with our team before ordering.</li>
+            </ol>
           </div>
           <div className="rounded-card border border-navy-100 bg-white p-6 shadow-card">
-            <h3 className="text-h4 text-navy-900">Need more information?</h3>
+            <h3 className="text-h3 text-navy-900">Why choose Engineer Parts?</h3>
             <p className="mt-3 text-base leading-relaxed text-steel-700">
-              Use the contact form or a product enquiry when a listing does not contain the details you need.
+              Browse real listings with item-level details, compare available stock, and contact our team about individual products or bulk requirements. We make missing or unconfirmed details clear so you can ask before proceeding.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <Link href="/clearance" className="btn-primary">

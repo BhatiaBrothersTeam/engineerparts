@@ -21,27 +21,23 @@ interface Facets {
 interface Filters {
   brands: string[];
   categories: string[];
-  subcategories: string[];
   conditions: string[];
   locations: string[];
   availability: string[];
   minPrice: string;
   maxPrice: string;
   minQuantity: string;
-  spec: string;
 }
 
 const EMPTY_FILTERS: Filters = {
   brands: [],
   categories: [],
-  subcategories: [],
   conditions: [],
   locations: [],
   availability: [],
   minPrice: "",
   maxPrice: "",
   minQuantity: "",
-  spec: "",
 };
 
 const SORTS = [
@@ -92,7 +88,6 @@ export function ClearanceBrowser({
       [
         "brands",
         "categories",
-        "subcategories",
         "conditions",
         "locations",
         "availability",
@@ -104,7 +99,6 @@ export function ClearanceBrowser({
     if (filters.minPrice) count += 1;
     if (filters.maxPrice) count += 1;
     if (filters.minQuantity) count += 1;
-    if (filters.spec) count += 1;
     return count;
   }, [filters, syncCategoryFilter]);
 
@@ -113,14 +107,12 @@ export function ClearanceBrowser({
       q: query,
       brands: filters.brands,
       categories: lockedCategory ? undefined : filters.categories,
-      subcategories: filters.subcategories,
       conditions: filters.conditions,
       locations: filters.locations,
       availability: filters.availability,
       minPrice: filters.minPrice ? Number(filters.minPrice) : undefined,
       maxPrice: filters.maxPrice ? Number(filters.maxPrice) : undefined,
       minQuantity: filters.minQuantity ? Number(filters.minQuantity) : undefined,
-      spec: filters.spec,
       sort,
     });
   }, [items, query, filters, sort, lockedCategory]);
@@ -156,7 +148,6 @@ export function ClearanceBrowser({
     const groups: { key: keyof Filters; title: string; label?: (value: string) => string }[] = [
       { key: "brands", title: "Brand" },
       { key: "categories", title: "Category", label: (value) => facets.categories.find((c) => c.slug === value)?.name ?? value },
-      { key: "subcategories", title: "Subcategory" },
       { key: "conditions", title: "Condition" },
       { key: "locations", title: "Location" },
       { key: "availability", title: "Availability" },
@@ -183,9 +174,6 @@ export function ClearanceBrowser({
     }
     if (filters.minQuantity) {
       chips.push({ key: "minQuantity", label: `Min qty: ${filters.minQuantity}`, onRemove: () => clearField("minQuantity") });
-    }
-    if (filters.spec) {
-      chips.push({ key: "spec", label: `Spec: ${filters.spec}`, onRemove: () => clearField("spec") });
     }
     return chips;
   }, [filters, facets.categories, syncCategoryFilter]);
@@ -214,9 +202,6 @@ export function ClearanceBrowser({
           />
         </FilterGroup>
       ) : null}
-      <FilterGroup title="Subcategory">
-        <CheckList options={facets.subcategories} selected={filters.subcategories} onToggle={(v) => toggle("subcategories", v)} />
-      </FilterGroup>
       <FilterGroup title="Condition" defaultOpen>
         <CheckList options={facets.conditions} selected={filters.conditions} onToggle={(v) => toggle("conditions", v)} />
       </FilterGroup>
@@ -255,22 +240,16 @@ export function ClearanceBrowser({
         />
       </FilterGroup>
       <FilterGroup title="Location">
-        <CheckList options={facets.locations} selected={filters.locations} onToggle={(v) => toggle("locations", v)} />
+        {facets.locations.length ? (
+          <CheckList options={facets.locations} selected={filters.locations} onToggle={(v) => toggle("locations", v)} />
+        ) : (
+          <p className="text-sm leading-relaxed text-steel-600">
+            Location details are confirmed when you enquire.
+          </p>
+        )}
       </FilterGroup>
       <FilterGroup title="Availability">
         <CheckList options={facets.availability} selected={filters.availability} onToggle={(v) => toggle("availability", v)} />
-      </FilterGroup>
-      <FilterGroup title="Specifications">
-        <input
-          placeholder="e.g. DN50, 4-20 mA, IP65"
-          value={filters.spec}
-          onChange={(e) => setFilters((c) => ({ ...c, spec: e.target.value }))}
-          className="field py-2 text-xs"
-          aria-label="Specification keyword"
-        />
-        <p className="mt-2 text-[11px] text-steel-500">
-          Searches specification labels and values across listings.
-        </p>
       </FilterGroup>
     </div>
   );
@@ -348,8 +327,8 @@ export function ClearanceBrowser({
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-steel-600">
-            <span className="font-bold text-navy-900">{formatNumber(results.length)}</span>{" "}
+          <p className="text-base text-steel-700 sm:text-lg">
+            <span className="text-lg font-extrabold text-navy-900 sm:text-xl">{formatNumber(results.length)}</span>{" "}
             {results.length === 1 ? "product" : "products"} found
           </p>
           <p className="text-xs text-steel-500">

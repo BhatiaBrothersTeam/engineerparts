@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useCart } from "@/components/providers/CartProvider";
+import { useToast } from "@/components/providers/ToastProvider";
 import { IconTile } from "@/components/ui/IconTile";
 import { track } from "@/lib/analytics";
 import { CONTACT_EMAIL, CONTACT_PHONE, formatPrice } from "@/lib/utils";
@@ -43,10 +44,12 @@ export function OrderSuccessView({
 }) {
   const { authenticated } = useAuth();
   const { clear, ready: cartReady } = useCart();
+  const { toast } = useToast();
   const [order, setOrder] = useState(initialOrder);
   const [view, setView] = useState<ViewState>(deriveState(initialOrder.status, initialOrder.paymentMethod));
   const tracked = useRef(false);
   const cartCleared = useRef(false);
+  const failureNotified = useRef(false);
 
   useEffect(() => {
     if (view === "confirmed" && !tracked.current) {
@@ -70,6 +73,17 @@ export function OrderSuccessView({
       // Storage may be disabled; the completed order remains safe in WooCommerce.
     }
   }, [view]);
+
+  useEffect(() => {
+    if (view !== "failed" || failureNotified.current) return;
+    failureNotified.current = true;
+    toast(
+      order.status === "cancelled"
+        ? `Payment was cancelled. Order #${order.number} is marked as payment not completed.`
+        : `Payment was not completed for order #${order.number}.`,
+      "info",
+    );
+  }, [view, order.number, order.status, toast]);
 
   useEffect(() => {
     if (view !== "confirming") return;
@@ -160,11 +174,11 @@ export function OrderSuccessView({
           <IconTile>
             <AlertIcon />
           </IconTile>
-          <p className="mt-4 text-xl font-extrabold text-navy-900">{cancelled ? "Payment attempt expired or was cancelled" : "Payment did not go through"}</p>
+          <p className="mt-4 text-xl font-extrabold text-navy-900">{cancelled ? "Payment cancelled" : "Payment not completed"}</p>
           <p className="mt-2 text-sm text-steel-600">
             {cancelled
-              ? `Order #${order.number} was cancelled and its reserved stock was released; review your cart and try again.`
-              : `Order #${order.number} was not paid. Your cart has been kept so you can try again, or contact our sales team.`}
+              ? `Payment was not completed for order #${order.number}. The order is cancelled and its reserved stock has been released; review your cart and try again.`
+              : `Payment was not completed for order #${order.number}. Your cart has been kept so you can try again, or contact our sales team.`}
           </p>
         </div>
         <div className="mt-6 flex flex-wrap justify-center gap-3 sm:justify-start">

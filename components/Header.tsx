@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { SearchBar } from "@/components/SearchBar";
+import { ScrollProgress } from "@/components/ScrollProgress";
 import { CategoryIcon } from "@/components/ui/CategoryIcon";
 import { useCart } from "@/components/providers/CartProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -89,7 +90,8 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
   // /clearance/<category> highlights "Categories"; retail and wholesale belong to "Clearance Stock".
-  const onCategoryPage = pathname.startsWith("/clearance/") && !/^\/clearance\/(retail|wholesale)(\/|$)/.test(pathname);
+  const onCategoryPage = pathname === "/categories"
+    || (pathname.startsWith("/clearance/") && !/^\/clearance\/(retail|wholesale)(\/|$)/.test(pathname));
   const accountHref = authenticated ? "/account" : "/login";
   const accountLabel = loading ? "Account" : authenticated ? customer?.firstName || "My Account" : "Login / Account";
 
@@ -102,17 +104,17 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
     <>
       <header
         className={cn(
-          "sticky top-0 z-50 border-b border-navy-100 bg-white transition-shadow",
+          "sticky top-16 z-50 border-b border-navy-100 bg-white transition-shadow sm:top-11",
           scrolled && "shadow-header",
         )}
       >
         <div className="shell">
-          <div className="flex min-w-0 items-center gap-2 py-3 sm:gap-4 lg:gap-8 lg:py-3.5">
+          <div className="flex min-w-0 items-center gap-2 py-3 sm:gap-4 lg:gap-8 lg:py-1.5">
             <div className="min-w-0 flex-1 lg:hidden">
-              <Logo compact />
+              <Logo compact large />
             </div>
             <div className="hidden shrink-0 lg:block">
-              <Logo />
+              <Logo large />
             </div>
 
             <div className="hidden min-w-0 flex-1 lg:block lg:max-w-3xl 2xl:max-w-4xl">
@@ -214,9 +216,9 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
           <div className="shell flex items-center justify-between gap-6">
         <nav className="-ml-3 min-w-0" aria-label="Primary">
           <div className="flex items-center">
-            {primaryNav.map((item, index) => (
+            {primaryNav.map((item) => (
               <Fragment key={item.label}>
-                {index === 0 ? (
+                {item.href === "/clearance" ? (
                   <div
                     className="relative"
                     onMouseEnter={() => setClearanceOpen(true)}
@@ -226,10 +228,10 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                       type="button"
                       onClick={() => setClearanceOpen((v) => !v)}
                       className={cn(
-                        "flex items-center gap-1 border-b-2 px-3 py-3 text-xs font-semibold uppercase tracking-wide transition-colors",
+                        "primary-nav-item gap-1",
                         isActive(item.href) && !onCategoryPage
-                          ? "border-brand-600 text-brand-700"
-                          : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
+                          ? "primary-nav-item-active"
+                          : "",
                       )}
                       aria-haspopup="true"
                       aria-expanded={clearanceOpen}
@@ -280,16 +282,16 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                   <Link
                     href={item.href}
                     className={cn(
-                      "whitespace-nowrap border-b-2 px-3 py-3 text-xs font-semibold uppercase tracking-wide transition-colors",
+                      "primary-nav-item",
                       isActive(item.href)
-                        ? "border-brand-600 text-brand-700"
-                        : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
+                        ? "primary-nav-item-active"
+                        : "",
                     )}
                   >
                     {item.label}
                   </Link>
                 )}
-                {index === 0 && navCategories.length ? (
+                {item.href === "/clearance" && navCategories.length ? (
                   <div
                     className="relative"
                     onMouseEnter={() => setCategoriesOpen(true)}
@@ -299,10 +301,10 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                       type="button"
                       onClick={() => setCategoriesOpen((v) => !v)}
                       className={cn(
-                        "flex items-center gap-1 border-b-2 px-3 py-3 text-xs font-semibold uppercase tracking-wide transition-colors",
+                        "primary-nav-item gap-1",
                         onCategoryPage
-                          ? "border-brand-600 text-brand-700"
-                          : "border-transparent text-navy-800 hover:border-navy-300 hover:text-brand-700",
+                          ? "primary-nav-item-active"
+                          : "",
                       )}
                       aria-haspopup="true"
                       aria-expanded={categoriesOpen}
@@ -334,10 +336,10 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                           ))}
                         </div>
                         <Link
-                          href="/clearance"
+                          href="/categories"
                           className="mt-2 block border-t border-navy-100 px-3 pt-3 text-xs font-semibold uppercase tracking-wide text-brand-700 hover:text-brand-500"
                         >
-                          View all clearance stock &rarr;
+                          View all categories &rarr;
                         </Link>
                       </div>
                     ) : null}
@@ -353,10 +355,11 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
             </p>
           </div>
         </div>
+        <ScrollProgress />
       </header>
 
       {mobileOpen ? (
-        <div className="fixed inset-0 z-[60] lg:hidden">
+        <div className="fixed inset-0 z-[60] animate-fade-in lg:hidden">
           <button
             type="button"
             aria-label="Close menu"
@@ -369,10 +372,10 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
             aria-modal="true"
             aria-label="Main navigation"
             tabIndex={-1}
-            className="absolute right-0 top-0 h-full w-[88%] max-w-sm overflow-y-auto bg-white pb-24 shadow-lift focus:outline-none"
+            className="animate-slide-in absolute right-0 top-0 h-full w-[88%] max-w-sm overflow-y-auto bg-white pb-24 shadow-lift focus:outline-none"
           >
             <div className="flex items-center justify-between border-b border-navy-100 px-4 py-3">
-              <Logo compact />
+              <Logo compact large />
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
@@ -420,12 +423,12 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
             </div>
 
             <nav className="border-t border-navy-100">
-              {primaryNav.map((item, index) => {
+              {primaryNav.map((item) => {
                 const Icon = NAV_ICON[item.href];
                 const active = isActive(item.href);
                 return (
                   <Fragment key={item.label}>
-                    {index === 0 ? (
+                    {item.href === "/clearance" ? (
                       <div className="border-b border-navy-50">
                         <button
                           type="button"
@@ -491,7 +494,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                         </span>
                       </Link>
                     )}
-                    {index === 0 && navCategories.length ? (
+                    {item.href === "/clearance" && navCategories.length ? (
                       <div className="border-b border-navy-50">
                         <button
                           type="button"
@@ -533,6 +536,12 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                                 <span className="text-xs font-normal normal-case text-steel-500">{category.count}</span>
                               </Link>
                             ))}
+                            <Link
+                              href="/categories"
+                              className="flex items-center px-4 py-3 pl-8 text-sm font-bold text-brand-700 hover:bg-navy-100"
+                            >
+                              View all categories &rarr;
+                            </Link>
                           </div>
                         ) : null}
                       </div>

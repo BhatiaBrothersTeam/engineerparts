@@ -1,5 +1,6 @@
 import { IconTile } from "@/components/ui/IconTile";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { RevealGroup } from "@/components/ui/Reveal";
 
 const ITEMS = [
   {
@@ -12,7 +13,7 @@ const ITEMS = [
     ),
   },
   {
-    title: "Dedicated clearance desk",
+    title: "Dedicated team",
     copy: "A team that responds to enquiries, confirms stock and arranges collection or freight.",
     icon: (
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -48,9 +49,9 @@ export function WhyEngineerparts() {
       <SectionHeading
         eyebrow="Why Engineerparts.com"
         title="Built for industrial buyers"
-        description="The clearance desk and catalogue are set up around how business buyers actually source parts and equipment."
+        description="Our team and catalogue are set up around how business buyers actually source parts and equipment."
       />
-      <div className="mt-6 grid gap-3 sm:mt-8 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
+      <RevealGroup className="mt-6 grid gap-3 sm:mt-8 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
         {ITEMS.map((item) => (
           <div key={item.title} className="card relative flex gap-4 overflow-hidden p-4 sm:min-h-[230px] sm:block sm:p-6">
             <span className="absolute inset-y-0 left-0 w-1 bg-brand-600 sm:inset-x-0 sm:bottom-auto sm:h-1 sm:w-auto" aria-hidden="true" />
@@ -61,7 +62,7 @@ export function WhyEngineerparts() {
             </div>
           </div>
         ))}
-      </div>
+      </RevealGroup>
     </div>
   );
 }

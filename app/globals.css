@@ -2,6 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes page-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes settle {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes soft-glow {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.65; transform: scale(1.08); }
+}
+
+@keyframes button-shine {
+  from { transform: translateX(-140%) skewX(-18deg); }
+  to { transform: translateX(320%) skewX(-18deg); }
+}
+
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+
 @layer base {
   /* Fonts are self-hosted (@fontsource-variable, imported in app/layout.tsx), so
      they never depend on reaching Google Fonts at build time. */
@@ -10,19 +44,16 @@
     --font-display: "Archivo Variable", "Inter Variable", system-ui, sans-serif;
   }
 
-  /* Root size drives every rem-based size (text, spacing, buttons): 15px keeps the
-     catalogue dense on phones and laptops; 16px on wide (2xl) screens. */
+  /* Root size drives every rem-based size (text, spacing, buttons). */
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
     overflow-x: clip;
-    font-size: 15px;
+    font-size: 16px;
   }
 
-  @media (min-width: 1536px) {
-    html {
-      font-size: 16px;
-    }
+  html.lenis {
+    scroll-behavior: auto;
   }
 
   /* iOS Safari zooms into any form control under 16px on focus. */
@@ -145,7 +176,7 @@
   }
 
   .btn {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-semibold transition duration-150 motion-safe:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
+    @apply relative inline-flex min-h-11 items-center justify-center gap-2 overflow-hidden rounded-md px-5 py-3 text-sm font-semibold transition duration-150 motion-safe:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
 
   .btn-primary {
@@ -170,6 +201,26 @@
 
   .header-action {
     @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold text-navy-800 transition-colors hover:bg-navy-50 hover:text-brand-700;
+  }
+
+  .primary-nav-item {
+    @apply relative flex whitespace-nowrap px-3 py-3 text-xs font-semibold uppercase tracking-wide text-navy-800 transition-colors hover:text-brand-700;
+  }
+
+  .primary-nav-item::after {
+    @apply absolute inset-x-3 bottom-0 h-0.5 origin-center scale-x-0 rounded-full bg-brand-600 transition-transform duration-200;
+    content: "";
+  }
+
+  .primary-nav-item:hover::after,
+  .primary-nav-item:focus-visible::after,
+  .primary-nav-item[aria-expanded="true"]::after,
+  .primary-nav-item-active::after {
+    @apply scale-x-100;
+  }
+
+  .primary-nav-item-active {
+    @apply text-brand-700;
   }
 
   .btn-sm {
@@ -222,7 +273,11 @@
   }
 
   .card-interactive {
-    @apply transition duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift motion-reduce:hover:translate-y-0;
+    transition:
+      transform 450ms var(--ease-out-soft),
+      border-color 300ms ease,
+      box-shadow 450ms var(--ease-out-soft);
+    @apply hover:-translate-y-1.5 hover:border-brand-200 hover:shadow-lift motion-reduce:hover:translate-y-0;
   }
 
   .icon-tile {
@@ -253,10 +308,9 @@
     }
   }
 
-  /* Home showcase rows hold exactly 8 products: column counts that divide 8
-     evenly, so no row is left with a single orphan card. */
+  /* Keep home listings to four columns on desktop for readable product cards. */
   .product-grid-showcase {
-    @apply grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:gap-5 min-[1800px]:grid-cols-8;
+    @apply grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:gap-5;
   }
 
   .brand-grid {
@@ -272,6 +326,14 @@
   /* Product cards size their internals from their own width, not the viewport. */
   .product-card {
     container-type: inline-size;
+  }
+
+  .product-card img {
+    transition: transform 650ms var(--ease-out-soft);
+  }
+
+  .product-card:hover img {
+    transform: scale(1.07);
   }
 
   .product-card-body {
@@ -317,6 +379,89 @@
 
     .product-card-specs > [data-extra] {
       display: block;
+    }
+  }
+
+  .page-enter {
+    animation: page-enter 280ms ease-out both;
+  }
+
+  .hero-rise {
+    animation: rise 620ms var(--ease-out-soft) both;
+  }
+
+  .hero-settle {
+    animation: settle 800ms var(--ease-out-soft) 180ms both;
+  }
+
+  .soft-glow {
+    animation: soft-glow 6s ease-in-out infinite;
+  }
+
+  .animate-slide-in {
+    animation: slide-in 320ms var(--ease-out-soft) both;
+  }
+
+  .btn-primary::after,
+  .btn-navy::after {
+    position: absolute;
+    inset: -35% auto -35% -35%;
+    width: 24%;
+    content: "";
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.28), transparent);
+    transform: translateX(-140%) skewX(-18deg);
+    pointer-events: none;
+  }
+
+  .btn-primary:hover::after,
+  .btn-navy:hover::after {
+    animation: button-shine 850ms var(--ease-out-soft);
+  }
+
+  [data-reveal][data-reveal-hidden] {
+    opacity: 0;
+    transform: translateY(var(--reveal-shift, 20px));
+    will-change: opacity, transform;
+  }
+
+  [data-reveal][data-revealed] {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 620ms var(--ease-out-soft),
+      transform 620ms var(--ease-out-soft);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  .card-interactive:hover .icon-tile {
+    transform: translateY(-2px);
+    background-color: theme("colors.brand.600");
+    color: white;
+  }
+
+  .icon-tile {
+    transition:
+      transform 300ms var(--ease-out-soft),
+      background-color 300ms ease,
+      color 300ms ease;
+  }
+
+  @media (scripting: none) {
+    [data-reveal][data-reveal-hidden] {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal][data-reveal-hidden] {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    .btn-primary::after,
+    .btn-navy::after {
+      display: none;
     }
   }
 

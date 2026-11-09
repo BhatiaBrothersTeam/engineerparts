@@ -69,9 +69,9 @@ export function WholesaleBrowser({ products }: { products: Product[] }) {
           ) : null}
         </div>
         <div className="mt-4 border-t border-navy-100 pt-3">
-          <p className="text-xs text-steel-600" aria-live="polite">
+          <p className="text-base text-steel-700" aria-live="polite">
             {results.length
-              ? `Showing ${formatNumber(firstResult)}–${formatNumber(lastResult)} of ${formatNumber(results.length)} listings`
+              ? <>Showing <span className="font-bold text-navy-900">{formatNumber(firstResult)}–{formatNumber(lastResult)}</span> of <span className="font-bold text-navy-900">{formatNumber(results.length)}</span> listings</>
               : "No matching wholesale listings"}
           </p>
         </div>
@@ -79,7 +79,7 @@ export function WholesaleBrowser({ products }: { products: Product[] }) {
 
       {pageItems.length ? (
         <>
-          <div className="mt-6 product-grid">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
             {pageItems.map((product) => (
               <WholesaleProductCard key={product.id} product={product} />
             ))}

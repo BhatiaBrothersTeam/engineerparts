@@ -94,8 +94,8 @@ export function ListingEnquiryForm() {
         </span>
         <p className="mt-4 text-xl font-extrabold text-navy-900">Enquiry received</p>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-steel-600">
-          Your reference is <span className="font-mono font-semibold text-navy-800">{reference}</span>. The
-          clearance desk will respond during the next working day.
+          Your reference is <span className="font-mono font-semibold text-navy-800">{reference}</span>. Our team
+          will respond during the next working day.
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <a href="/account/enquiries" className="btn-primary">

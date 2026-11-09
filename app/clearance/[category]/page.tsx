@@ -15,6 +15,13 @@ export async function generateMetadata({ params }: { params: { category: string 
   return {
     title: `${label} clearance stock`,
     description: `Browse ${label.toLowerCase()} clearance and surplus stock from Engineerparts.com.`,
+    alternates: { canonical: `/clearance/${params.category}` },
+    openGraph: {
+      title: `${label} clearance stock`,
+      description: `Browse ${label.toLowerCase()} clearance and surplus stock from Engineerparts.com.`,
+      url: `/clearance/${params.category}`,
+      type: "website",
+    },
   };
 }
 
@@ -26,9 +33,33 @@ export default async function CategoryPage({ params }: { params: { category: str
 
   const items = products.filter((product) => product.category === category.slug);
   const facets = buildFacets(items);
+  const categoryUrl = `https://engineerparts.com/clearance/${category.slug}`;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        name: `${category.label} clearance stock`,
+        url: categoryUrl,
+        description: `Browse ${category.label.toLowerCase()} clearance and surplus stock currently available.`,
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: "https://engineerparts.com" },
+          { "@type": "ListItem", position: 2, name: "Clearance Stock", item: "https://engineerparts.com/clearance" },
+          { "@type": "ListItem", position: 3, name: category.label, item: categoryUrl },
+        ],
+      },
+    ],
+  };
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
+      />
       <TrackView event="category_view" payload={{ category: category.slug, count: items.length }} />
       <PageHero
         breadcrumbs={[{ label: "Clearance Stock", href: "/clearance" }, { label: category.label }]}

@@ -38,7 +38,7 @@ export default function PrivacyPage() {
               <h2 className={headingClass}>1. Who We Are</h2>
               <p className={paragraphClass}>
                 Engineerparts.com (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) is an
-                online industrial marketplace and clearance desk for surplus stock, dead stock,
+                online industrial marketplace for surplus stock, dead stock,
                 industrial equipment, spare parts, tools and engineered parts, sold to retail and
                 business buyers. The website is operated by [Insert Legal Entity Name], of [Insert
                 Registered Office / Warehouse Address], United Arab Emirates, which is the
@@ -387,7 +387,7 @@ export default function PrivacyPage() {
               <p className={paragraphClass}>
                 <strong className="text-navy-900">Marketing and transfers:</strong> we send
                 promotional alerts only with your explicit opt-in, each with a one-click
-                unsubscribe. Transfers to our UAE clearance desk are made to fulfil your sourcing
+                unsubscribe. Transfers to our UAE team are made to fulfil your sourcing
                 requests, arrange freight and provide support.
               </p>
               <p className={paragraphClass}>
@@ -478,7 +478,7 @@ export default function PrivacyPage() {
               <h2 className={headingClass}>10. How to Exercise Your Rights</h2>
               <p className={paragraphClass}>
                 To request a copy, correction or deletion of your records, or to opt out of
-                marketing or targeted advertising, contact our Clearance Desk &amp; Privacy Team:
+                marketing or targeted advertising, contact our Privacy Team:
               </p>
               <ul className={listClass}>
                 <li>

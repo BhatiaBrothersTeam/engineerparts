@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { submitLead } from "@/lib/leads";
 import { customerErrorMessage, validateCustomerFields } from "@/lib/customer-feedback";
+import { Reveal } from "@/components/ui/Reveal";
 
 interface BulkForm {
   name: string;
@@ -66,16 +68,20 @@ export function BulkDealSection() {
   }
 
   return (
-    <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+    <Reveal>
+      <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
       <div>
         <p className="eyebrow text-brand-600">Bulk quantities &amp; complete lots</p>
         <h2 className="text-h2 mt-2 text-navy-900">
-          Looking for volume or multiple products?
+          Looking for bulk stock or complete lots?
         </h2>
         <p className="mt-3 max-w-lg text-sm leading-relaxed text-steel-600 sm:text-base">
-          Send your requirements and the product references you are interested in. The team can
-          follow up with the information currently available.
+          Tell us what products, quantities or surplus stock packages you need. We will confirm
+          what is currently available and follow up on your requirements.
         </p>
+        <Link href="/clearance/wholesale" className="link-underline mt-4 inline-flex text-sm font-semibold text-brand-700 hover:text-brand-500">
+          Browse wholesale stock
+        </Link>
         <dl className="mt-8 grid gap-5 sm:grid-cols-3">
           {[
             ["Product references", "Include the relevant SKU or part number."],
@@ -96,7 +102,7 @@ export function BulkDealSection() {
             <p className="text-lg font-bold text-navy-900">Bulk enquiry received</p>
             <p className="mt-2 text-sm text-steel-600">
               Reference <span className="font-mono font-semibold text-navy-900">{reference}</span>. Our
-              clearance desk will come back to you with availability and pricing.
+              team will come back to you with availability and pricing.
             </p>
             <button
               type="button"
@@ -157,7 +163,8 @@ export function BulkDealSection() {
           </form>
         )}
       </div>
-    </div>
+      </div>
+    </Reveal>
   );
 }
 

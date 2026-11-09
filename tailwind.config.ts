@@ -70,7 +70,13 @@ const config: Config = {
         header: "0 1px 0 rgba(0,0,0,0.08)",
       },
       borderRadius: {
-        card: "6px",
+        sm: "8px",
+        DEFAULT: "10px",
+        md: "12px",
+        lg: "16px",
+        xl: "20px",
+        "2xl": "24px",
+        card: "20px",
       },
       maxWidth: {
         shell: "1920px",
