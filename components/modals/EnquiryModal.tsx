@@ -378,7 +378,7 @@ export function EnquiryModal() {
 
             <div className="mt-5 grid gap-3 border-t border-navy-100 pt-4 sm:flex sm:flex-wrap sm:items-center">
               <button type="submit" disabled={submitting} className="btn-primary w-full sm:w-auto">
-                {submitting ? "Submitting..." : "Submit Enquiry"}
+                {submitting ? "Submitting..." : "Submit Bulk Enquiry"}
               </button>
               <button type="button" onClick={closeEnquiry} className="btn-outline w-full sm:w-auto">
                 Cancel

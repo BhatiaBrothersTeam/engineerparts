@@ -4,8 +4,8 @@ import { RevealGroup } from "@/components/ui/Reveal";
 
 const ITEMS = [
   {
-    title: "Verified listings",
-    copy: "Condition, specification and stock details are published with every available item.",
+    title: "70+ years of experience",
+    copy: "Industry experience informs the practical support we provide to maintenance and procurement teams.",
     icon: (
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
         <path d="m5 13 4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
@@ -13,8 +13,8 @@ const ITEMS = [
     ),
   },
   {
-    title: "Dedicated team",
-    copy: "A team that responds to enquiries, confirms stock and arranges collection or freight.",
+    title: "Part identification support",
+    copy: "Share a part number, equipment details, specifications or a label photo so we can help narrow down your options.",
     icon: (
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
         <path d="M4 5h16M4 12h16M4 19h10" strokeLinecap="round" />
@@ -22,8 +22,8 @@ const ITEMS = [
     ),
   },
   {
-    title: "Freight & logistics support",
-    copy: "From single parts to palletised equipment, we help arrange delivery to your site.",
+    title: "Delivery coordination",
+    copy: "We check availability, provide an estimated timeline and coordinate dispatch around your destination and required date.",
     icon: (
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
         <path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" strokeLinecap="round" strokeLinejoin="round" />
@@ -33,8 +33,8 @@ const ITEMS = [
     ),
   },
   {
-    title: "Built for business buyers",
-    copy: "Bulk quantities, lots and equipment enquiries are handled with trade pricing in mind.",
+    title: "One part or a full list",
+    copy: "Request one replacement component or send a complete parts list for planned maintenance.",
     icon: (
       <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
         <path d="M4 21V9l8-5 8 5v12M9 21v-6h6v6" strokeLinecap="round" strokeLinejoin="round" />
@@ -48,8 +48,8 @@ export function WhyEngineerparts() {
     <div className="w-full">
       <SectionHeading
         eyebrow="Why Engineerparts.com"
-        title="Built for industrial buyers"
-        description="Our team and catalogue are set up around how business buyers actually source parts and equipment."
+        title="Practical support for industrial buyers"
+        description="From identifying the right component to coordinating delivery, we help you source spare parts with greater confidence."
       />
       <RevealGroup className="mt-6 grid gap-3 sm:mt-8 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
         {ITEMS.map((item) => (

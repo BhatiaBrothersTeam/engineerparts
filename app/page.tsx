@@ -234,14 +234,14 @@ export default async function HomePage() {
         <div className="shell">
           <SectionHeading
             eyebrow="How it works"
-            title="From browsing to delivery"
-            description="A clear path from finding stock to arranging your order."
+            title="From enquiry to delivery"
+            description="A clear path from sharing your requirement to coordinating dispatch."
           />
           <ol className="mt-6 grid gap-4 sm:mt-8 md:grid-cols-3">
             {[
-              ["Browse available stock", "Search products by category, brand, condition or quantity."],
-              ["Enquire or place a request", "Send the product reference and quantity your business needs."],
-              ["Confirm delivery or collection", "Our team confirms availability and discusses delivery or collection by appointment."],
+              ["Share your requirement", "Send a part number, equipment details, specifications, a label photo or your full parts list."],
+              ["Confirm the right part", "Our team checks availability and clarifies any details that could affect fit or performance."],
+              ["Plan delivery", "We provide an estimated timeline and coordinate dispatch around the destination and required date."],
             ].map(([title, copy], index) => (
               <li key={title}>
                 <Reveal delay={index * 90} className="h-full">
