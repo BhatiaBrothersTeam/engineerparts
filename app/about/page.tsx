@@ -99,18 +99,19 @@ export default function AboutPage() {
             <div className="mt-5 max-w-2xl space-y-4 text-base leading-relaxed text-steel-700">
               <p>
                 Engineer Parts helps maintenance and procurement teams source industrial spare parts
-                for repairs, replacements and planned maintenance.
+                for repairs, replacements and planned maintenance. Whether you&apos;re dealing with
+                an unexpected breakdown or preparing for a scheduled shutdown, we help you identify
+                the right component, check availability and plan around delivery timelines.
               </p>
               <p>
-                Whether you&apos;re dealing with an unexpected breakdown or preparing for a
-                scheduled shutdown, we help you move from technical information to a clearer
-                purchasing decision.
+                Backed by over 70 years of industry experience, we help you move from technical
+                information to a clearer purchasing decision.
               </p>
             </div>
           </Reveal>
 
           <Reveal delay={90}>
-            <article className="relative overflow-hidden rounded-card bg-navy-900 p-6 text-white shadow-lift sm:p-8">
+            <article className="relative overflow-hidden rounded-card bg-brand-700 p-6 text-white shadow-lift sm:p-8">
               <span className="absolute inset-y-0 left-0 w-1.5 bg-brand-500" aria-hidden="true" />
               <p className="eyebrow text-brand-300">Our mission</p>
               <h2 className="text-h3 mt-3">Make industrial spare parts easier to source.</h2>
@@ -127,9 +128,9 @@ export default function AboutPage() {
       <section className="section section-alt">
         <div className="shell">
           <SectionHeading
-            eyebrow="What to send us"
+            eyebrow="Our inventory"
             title="Start with the information you already have"
-            description="You do not need a perfectly prepared specification. Send us the best available information and we will help narrow down the options."
+            description="Our range focuses on engineering and industrial components used in equipment maintenance and repair. Send us a part number to check availability, or share the equipment make and model, technical specifications or a photo of the existing part's label so we can help narrow down your options. If you're sourcing several items, send your full parts list in one enquiry."
           />
           <RevealGroup className="mt-8 grid gap-4 md:grid-cols-3">
             {REQUIREMENTS.map((item) => (
@@ -146,9 +147,9 @@ export default function AboutPage() {
       <section className="section">
         <div className="shell">
           <SectionHeading
-            eyebrow="How we help"
+            eyebrow="Logistics & delivery process"
             title="From requirement to delivery"
-            description="A straightforward sourcing process with clear checks at every stage."
+            description="We check availability and provide an estimated delivery timeline based on the items ordered and the destination. Once your order is confirmed, we coordinate dispatch and communicate the expected delivery timing. If you're working around a shutdown or an urgent repair, let us know your required date upfront so we can review the available options with you."
           />
           <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {PROCESS.map((item, index) => (
@@ -175,9 +176,9 @@ export default function AboutPage() {
             <h2 className="text-h2 mt-3 text-navy-900">Details checked before you commit</h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-steel-700">
               Small differences in specifications can affect how a part fits or performs. We review
-              the information you provide and flag anything that needs clarification before the
-              order is confirmed. This helps reduce the risk of ordering the wrong component and
-              delaying the repair.
+              the information you provide, including part numbers, dimensions and equipment
+              details, and flag anything that needs clarification before the order is confirmed.
+              This helps reduce the risk of ordering the wrong component and delaying the repair.
             </p>
           </Reveal>
           <Reveal delay={90}>
@@ -200,6 +201,29 @@ export default function AboutPage() {
             </ul>
           </Reveal>
         </div>
+      </section>
+
+      <section className="section">
+        <Reveal className="shell">
+          <div className="max-w-4xl">
+            <p className="eyebrow text-brand-600">Why choose Engineer Parts?</p>
+            <h2 className="text-h2 mt-3 text-navy-900">
+              Practical sourcing support from enquiry through delivery
+            </h2>
+            <div className="mt-5 space-y-4 text-base leading-relaxed text-steel-700">
+              <p>
+                You get practical sourcing support from the first enquiry through delivery
+                coordination. We help you work out which part to order, what&apos;s available and
+                when you can expect it, so you can make purchasing decisions with greater
+                confidence.
+              </p>
+              <p>
+                Whether you need one replacement or a full list of spares for planned maintenance,
+                we&apos;re here to help.
+              </p>
+            </div>
+          </div>
+        </Reveal>
       </section>
 
       <section className="section">
