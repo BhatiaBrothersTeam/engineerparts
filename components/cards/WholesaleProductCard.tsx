@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ConditionPill, ListingBadges, StatusPill } from "@/components/ui/Badge";
 import { useEnquiry } from "@/components/providers/EnquiryProvider";
+import { SaveProductButton } from "@/components/account/SaveProductButton";
 import { track } from "@/lib/analytics";
 import type { Product } from "@/lib/types";
 import { absoluteUrl, formatNumber, openWhatsApp, productWhatsAppMessage, relativeAdded } from "@/lib/utils";
@@ -107,9 +108,12 @@ export function WholesaleProductCard({ product }: { product: Product }) {
             >
               WhatsApp
             </button>
-            <button type="button" onClick={onEnquire} className="btn-outline btn-sm">
+            <div className="product-card-wide flex gap-2">
+            <button type="button" onClick={onEnquire} className="btn-outline btn-sm min-w-0 flex-1">
               Enquire Now
             </button>
+            <SaveProductButton productId={product.id} compact />
+            </div>
           </div>
         </div>
       </div>

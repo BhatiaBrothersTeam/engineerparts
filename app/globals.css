@@ -7,18 +7,22 @@
 }
 
 @keyframes page-enter {
-  from { opacity: 0; }
+  from { opacity: 0.98; }
   to { opacity: 1; }
 }
 
 @keyframes rise {
-  from { opacity: 0; transform: translateY(18px); }
+  from { transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
 
 @keyframes settle {
-  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  from { transform: translateY(6px); }
   to { opacity: 1; transform: none; }
+}
+
+@keyframes cart-badge-pop {
+  50% { transform: scale(1.2); }
 }
 
 @keyframes soft-glow {
@@ -200,11 +204,53 @@
   }
 
   .header-action {
-    @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold text-navy-800 transition-colors hover:bg-navy-50 hover:text-brand-700;
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold text-navy-800 transition-colors duration-200 hover:bg-navy-50 hover:text-brand-700;
+  }
+
+  .header-icon {
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-navy-200 text-navy-800 transition-colors duration-200 hover:bg-navy-50 hover:text-brand-700;
+  }
+
+  .save-heart {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-navy-200 bg-white text-navy-700 transition-colors duration-200 hover:border-signal-300 hover:bg-signal-50 hover:text-signal-700 focus-visible:border-signal-300 focus-visible:bg-signal-50 focus-visible:text-signal-700 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .save-heart.is-saved,
+  .header-heart.is-saved {
+    @apply text-signal-700;
+  }
+
+  .header-heart:hover,
+  .header-heart:focus-visible {
+    @apply bg-signal-50 text-signal-700;
+  }
+
+  .save-heart svg,
+  .header-heart svg {
+    @apply transition-transform duration-200;
+  }
+
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .save-heart:hover svg,
+    .header-heart:hover svg {
+      transform: scale(1.08);
+    }
+
+    .cart-action:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+  .cart-action {
+    transition: color 200ms, background-color 200ms, transform 200ms;
+  }
+
+  .cart-badge-added {
+    animation: cart-badge-pop 240ms ease-out;
   }
 
   .primary-nav-item {
-    @apply relative flex whitespace-nowrap px-3 py-3 text-xs font-semibold uppercase tracking-wide text-navy-800 transition-colors hover:text-brand-700;
+    @apply relative flex min-h-11 items-center whitespace-nowrap rounded-t-md px-3 py-3 text-xs font-semibold uppercase tracking-wide text-navy-800 transition-colors duration-200 hover:bg-white hover:text-brand-700;
   }
 
   .primary-nav-item::after {
@@ -240,7 +286,7 @@
   }
 
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-navy-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy-700 transition-colors hover:border-brand-500 hover:text-brand-700;
+    @apply inline-flex min-h-11 items-center gap-1.5 rounded-full border border-navy-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy-700 transition-colors duration-200 hover:border-brand-500 hover:bg-brand-50 hover:text-brand-700 active:bg-brand-100;
   }
 
   .chip-dark {
@@ -274,10 +320,10 @@
 
   .card-interactive {
     transition:
-      transform 450ms var(--ease-out-soft),
-      border-color 300ms ease,
-      box-shadow 450ms var(--ease-out-soft);
-    @apply hover:-translate-y-1.5 hover:border-brand-200 hover:shadow-lift motion-reduce:hover:translate-y-0;
+      transform 200ms var(--ease-out-soft),
+      border-color 200ms ease,
+      box-shadow 200ms var(--ease-out-soft);
+    @apply hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lift focus-within:border-brand-300 focus-within:shadow-lift motion-reduce:hover:translate-y-0;
   }
 
   .icon-tile {
@@ -329,11 +375,11 @@
   }
 
   .product-card img {
-    transition: transform 650ms var(--ease-out-soft);
+    transition: transform 200ms var(--ease-out-soft);
   }
 
   .product-card:hover img {
-    transform: scale(1.07);
+    transform: scale(1.03);
   }
 
   .product-card-body {
@@ -387,11 +433,11 @@
   }
 
   .hero-rise {
-    animation: rise 620ms var(--ease-out-soft) both;
+    animation: rise 240ms var(--ease-out-soft) both;
   }
 
   .hero-settle {
-    animation: settle 800ms var(--ease-out-soft) 180ms both;
+    animation: settle 240ms var(--ease-out-soft) both;
   }
 
   .soft-glow {
@@ -462,6 +508,10 @@
     .btn-primary::after,
     .btn-navy::after {
       display: none;
+    }
+
+    .product-card:hover img {
+      transform: none;
     }
   }
 

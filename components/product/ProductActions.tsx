@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/providers/CartProvider";
 import { useEnquiry } from "@/components/providers/EnquiryProvider";
 import { useToast } from "@/components/providers/ToastProvider";
@@ -23,14 +23,17 @@ export function ProductActions({ product }: { product: Product }) {
   const { openEnquiry } = useEnquiry();
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
+  const addedTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(addedTimer.current), []);
 
   const purchasable = isPurchasable(product.status) && product.price !== null && product.quantity_available !== null && product.quantity_available > 0;
   const wooPurchasable = isPurchasable(product.status) && product.price !== null && Boolean(product.woocommerce_checkout_url);
   const sold = product.status === "Sold";
 
   function onAddToCart() {
-    if (!purchasable || product.price === null || product.quantity_available === null) return;
-    addItem(
+    if (!purchasable || product.price === null || product.quantity_available === null || addedTimer.current) return;
+    const success = addItem(
       {
         productId: product.id,
         sku: product.sku,
@@ -46,7 +49,11 @@ export function ProductActions({ product }: { product: Product }) {
       },
       quantity,
     );
-    toast(`${quantity} x ${product.sku} added to cart`);
+    if (success) {
+      setAdded(true);
+      toast("Added to cart.");
+      addedTimer.current = setTimeout(() => { setAdded(false); addedTimer.current = undefined; }, 1200);
+    } else toast("The available quantity is already in your cart.", "error");
   }
 
   function onWooCommerceCheckout() {
@@ -140,8 +147,8 @@ export function ProductActions({ product }: { product: Product }) {
           </button>
         ) : null}
         {purchasable ? (
-          <button type="button" onClick={onAddToCart} className="btn-outline col-span-2">
-            Add to Cart
+          <button type="button" onClick={onAddToCart} disabled={added} className="btn-outline col-span-2" aria-live="polite">
+            {added ? "Added to Cart" : "Add to Cart"}
           </button>
         ) : null}
         <button

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import { ProductCard } from "@/components/cards/ProductCard";
+import { PRODUCT_PAGE_SIZE, ProductPagination, useProductPage } from "@/components/ui/ProductPagination";
 import { LotCard } from "@/components/cards/LotCard";
 import { EquipmentCard } from "@/components/cards/EquipmentCard";
 import { SearchBar } from "@/components/SearchBar";
@@ -26,9 +27,10 @@ export function SearchResults({ initialQuery, products }: { initialQuery: string
   const equipmentHits = hits.filter((h) => h.kind === "equipment");
 
   const productItems = useMemo(
-    () => (query.trim() ? filterProducts(products, { q: query }).slice(0, 60) : []),
+    () => (query.trim() ? filterProducts(products, { q: query }) : []),
     [products, query],
   );
+  const { page, pageCount, start } = useProductPage(productItems.length);
   const resultCount = productItems.length + hits.length;
   const suggestion = useMemo(
     () => (resultCount === 0 ? suggestProductQuery(products, query) : undefined),
@@ -106,11 +108,12 @@ export function SearchResults({ initialQuery, products }: { initialQuery: string
           {productItems.length ? (
             <div>
               <SectionHeading eyebrow="Products" title="Clearance stock" />
-              <div className="mt-5 product-grid">
-                {productItems.map((product) => (
+              <div id="product-grid" className="mt-5 scroll-mt-48 product-grid">
+                {productItems.slice(start, start + PRODUCT_PAGE_SIZE).map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
+              <ProductPagination total={productItems.length} page={page} pageCount={pageCount} gridId="product-grid" />
             </div>
           ) : null}
 

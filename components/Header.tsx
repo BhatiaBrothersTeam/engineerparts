@@ -7,8 +7,10 @@ import { Logo } from "@/components/Logo";
 import { SearchBar } from "@/components/SearchBar";
 import { ScrollProgress } from "@/components/ScrollProgress";
 import { CategoryIcon } from "@/components/ui/CategoryIcon";
+import { HeartIcon } from "@/components/ui/HeartIcon";
 import { useCart } from "@/components/providers/CartProvider";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useSavedProducts } from "@/components/providers/SavedProductsProvider";
 import { primaryNav } from "@/lib/nav";
 import { track } from "@/lib/analytics";
 import type { CategorySummaryItem } from "@/lib/categories";
@@ -26,7 +28,8 @@ const MAX_NAV_CATEGORIES = 8;
 
 export function Header({ categories = [] }: { categories?: CategorySummaryItem[] }) {
   const pathname = usePathname();
-  const { count } = useCart();
+  const { count, additionRevision } = useCart();
+  const { count: savedCount, ready: savedReady } = useSavedProducts();
   const { authenticated, customer, loading, logout } = useAuth();
   const navCategories = categories.slice(0, MAX_NAV_CATEGORIES);
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
@@ -39,6 +42,9 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const drawerHasOpened = useRef(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const clearanceMenuRef = useRef<HTMLDivElement>(null);
+  const categoriesMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -57,6 +63,12 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
       setCategoriesOpen(false);
       setClearanceOpen(false);
       setAccountOpen(false);
+      for (const menu of [accountMenuRef.current, clearanceMenuRef.current, categoriesMenuRef.current]) {
+        if (menu?.contains(document.activeElement)) {
+          menu.querySelector<HTMLButtonElement>("button")?.focus();
+          break;
+        }
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -111,22 +123,24 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
         <div className="shell">
           <div className="flex min-w-0 items-center gap-2 py-3 sm:gap-4 lg:gap-8 lg:py-1.5">
             <div className="min-w-0 flex-1 lg:hidden">
-              <Logo compact large />
+              <Logo compact large animated />
             </div>
             <div className="hidden shrink-0 lg:block">
-              <Logo large />
+              <Logo large animated />
             </div>
 
             <div className="hidden min-w-0 flex-1 lg:block lg:max-w-3xl 2xl:max-w-4xl">
               <SearchBar />
             </div>
 
-            <div className="ml-auto flex shrink-0 items-center gap-1.5 lg:gap-1">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5 lg:gap-2">
               {authenticated ? (
                 <div
+                  ref={accountMenuRef}
                   className="relative hidden lg:block"
                   onMouseEnter={() => setAccountOpen(true)}
-                  onMouseLeave={() => setAccountOpen(false)}
+                  onMouseLeave={(event) => { if (!event.currentTarget.contains(document.activeElement)) setAccountOpen(false); }}
+                  onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setAccountOpen(false); }}
                 >
                   <button
                     type="button"
@@ -135,6 +149,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                     aria-haspopup="true"
                     aria-expanded={accountOpen}
                     aria-label="My account"
+                    title="My account"
                   >
                     <UserIcon />
                     <span className="hidden max-w-28 truncate xl:inline">{accountLabel}</span>
@@ -158,48 +173,60 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                   ) : null}
                 </div>
               ) : (
-                <Link href="/login" className="header-action hidden lg:inline-flex" aria-label="Sign in or create account">
+                <Link href="/login" className="header-action hidden lg:inline-flex" aria-label="Sign in or create account" title="Sign in or create account">
                   <UserIcon />
                   <span className="hidden xl:inline">Sign in</span>
                 </Link>
               )}
 
-              <Link href="/enquiry" className="header-action hidden lg:inline-flex" aria-label="Enquiry">
+              <Link href="/enquiry" className="header-action hidden lg:inline-flex" aria-label="Enquiry" title="Enquiry">
                 <InboxIcon />
                 <span className="hidden xl:inline">Enquiry</span>
               </Link>
 
-              <Link href="/cart" className="header-action relative hidden lg:inline-flex" aria-label={`Cart, ${count} items`}>
+              <Link href="/saved-products" className={cn("header-action header-heart hidden lg:inline-flex", savedCount > 0 && "is-saved")} aria-label={savedReady ? `Saved products, ${savedCount} ${savedCount === 1 ? "item" : "items"}` : "Saved products, loading"} title="Saved products">
+                <span className="relative"><HeartIcon filled={savedCount > 0} />{savedReady && savedCount > 0 ? <CountBubble count={savedCount} className="-right-3 -top-2.5" /> : null}</span>
+                <span className="hidden xl:inline">Saved</span>
+              </Link>
+              <Link href="/saved-products" className={cn("header-icon header-heart relative lg:hidden", savedCount > 0 && "is-saved")} aria-label={savedReady ? `Saved products, ${savedCount} ${savedCount === 1 ? "item" : "items"}` : "Saved products, loading"} title="Saved products">
+                <HeartIcon filled={savedCount > 0} />
+                {savedReady && savedCount > 0 ? <CountBubble count={savedCount} /> : null}
+              </Link>
+
+              <Link href="/cart" className="header-action cart-action relative hidden lg:inline-flex" aria-label={`Cart, ${count} ${count === 1 ? "item" : "items"}`} title="Cart">
                 <span className="relative">
                   <CartIcon />
-                  {count > 0 ? <CountBubble count={count} className="-right-3 -top-2.5" /> : null}
+                  {count > 0 ? <CountBubble key={additionRevision} count={count} className={cn("-right-3 -top-2.5", additionRevision > 0 && "cart-badge-added")} /> : null}
                 </span>
                 <span className="hidden xl:inline">Cart</span>
               </Link>
 
               <Link
                 href={accountHref}
-                className="hidden h-11 w-11 items-center justify-center rounded-md border border-navy-200 text-navy-800 sm:inline-flex lg:hidden"
+                className="header-icon hidden sm:inline-flex lg:hidden"
                 aria-label={authenticated ? "My account" : "Sign in or create account"}
+                title={authenticated ? "My account" : "Sign in or create account"}
               >
                 <UserIcon />
               </Link>
 
               <Link
                 href="/cart"
-                className="relative inline-flex h-11 w-11 items-center justify-center rounded-md border border-navy-200 text-navy-800 lg:hidden"
-                aria-label={`Cart, ${count} items`}
+                className="header-icon cart-action relative lg:hidden"
+                aria-label={`Cart, ${count} ${count === 1 ? "item" : "items"}`}
+                title="Cart"
               >
                 <CartIcon />
-                {count > 0 ? <CountBubble count={count} /> : null}
+                {count > 0 ? <CountBubble key={additionRevision} count={count} className={cn("-right-1 -top-1", additionRevision > 0 && "cart-badge-added")} /> : null}
               </Link>
 
               <button
                 ref={menuButtonRef}
                 type="button"
                 onClick={() => setMobileOpen((v) => !v)}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-navy-200 text-navy-900 lg:hidden"
+                className="header-icon lg:hidden"
                 aria-label="Toggle navigation menu"
+                title="Navigation menu"
                 aria-expanded={mobileOpen}
               >
                 {mobileOpen ? <CloseIcon /> : <MenuIcon />}
@@ -220,9 +247,11 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
               <Fragment key={item.label}>
                 {item.href === "/clearance" ? (
                   <div
+                    ref={clearanceMenuRef}
                     className="relative"
                     onMouseEnter={() => setClearanceOpen(true)}
-                    onMouseLeave={() => setClearanceOpen(false)}
+                    onMouseLeave={(event) => { if (!event.currentTarget.contains(document.activeElement)) setClearanceOpen(false); }}
+                    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setClearanceOpen(false); }}
                   >
                     <button
                       type="button"
@@ -235,6 +264,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                       )}
                       aria-haspopup="true"
                       aria-expanded={clearanceOpen}
+                      aria-current={isActive(item.href) && !onCategoryPage ? "page" : undefined}
                     >
                       {item.label}
                       <ChevronIcon />
@@ -281,6 +311,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                 ) : (
                   <Link
                     href={item.href}
+                    aria-current={isActive(item.href) ? "page" : undefined}
                     className={cn(
                       "primary-nav-item",
                       isActive(item.href)
@@ -293,9 +324,11 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                 )}
                 {item.href === "/clearance" && navCategories.length ? (
                   <div
+                    ref={categoriesMenuRef}
                     className="relative"
                     onMouseEnter={() => setCategoriesOpen(true)}
-                    onMouseLeave={() => setCategoriesOpen(false)}
+                    onMouseLeave={(event) => { if (!event.currentTarget.contains(document.activeElement)) setCategoriesOpen(false); }}
+                    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setCategoriesOpen(false); }}
                   >
                     <button
                       type="button"
@@ -308,6 +341,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
                       )}
                       aria-haspopup="true"
                       aria-expanded={categoriesOpen}
+                      aria-current={onCategoryPage ? "page" : undefined}
                     >
                       Categories
                       <ChevronIcon />
@@ -379,8 +413,9 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-navy-200"
+                className="header-icon"
                 aria-label="Close menu"
+                title="Close menu"
               >
                 <CloseIcon />
               </button>
@@ -565,7 +600,7 @@ export function Header({ categories = [] }: { categories?: CategorySummaryItem[]
 
 function AccountMenuLink({ href, icon, children }: { href: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <Link href={href} className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-semibold text-navy-800 hover:bg-navy-50">
+    <Link href={href} className="flex min-h-11 items-center gap-2.5 rounded-md px-3 py-2 text-sm font-semibold text-navy-800 transition-colors hover:bg-navy-50 hover:text-brand-700">
       {icon ? <span className="text-steel-400">{icon}</span> : null}
       {children}
     </Link>
@@ -574,7 +609,7 @@ function AccountMenuLink({ href, icon, children }: { href: string; icon?: React.
 
 function CountBubble({ count, className = "-right-1 -top-1" }: { count: number; className?: string }) {
   return (
-    <span className={cn("absolute flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white", className)}>
+    <span aria-hidden="true" className={cn("absolute flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white", className)}>
       {count}
     </span>
   );
@@ -624,7 +659,7 @@ function CloseIcon() {
 
 function UserIcon() {
   return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
       <circle cx="12" cy="8" r="3.4" />
       <path d="M4.5 20a7.5 7.5 0 0 1 15 0" strokeLinecap="round" />
     </svg>
@@ -633,7 +668,7 @@ function UserIcon() {
 
 function InboxIcon() {
   return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
       <path d="M3.5 13.5V7.5A2 2 0 0 1 5.5 5.5h13a2 2 0 0 1 2 2v6m-17 0V18a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-4.5m-17 0h4l1 2h6l1-2h4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -641,7 +676,7 @@ function InboxIcon() {
 
 function CartIcon() {
   return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
       <path d="M3 5h2l2.2 10.3a2 2 0 0 0 2 1.7h7.6a2 2 0 0 0 2-1.6L20 8H6" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx="9.5" cy="20" r="1.3" />
       <circle cx="17.5" cy="20" r="1.3" />
@@ -739,14 +774,6 @@ function ReceiptIcon() {
     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
       <path d="M6 3.5h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3v-17Z" strokeLinejoin="round" />
       <path d="M8.5 8h7M8.5 11.5h7M8.5 15h4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <path d="M12 20s-7.5-4.6-9.8-9A5.3 5.3 0 0 1 12 6.3 5.3 5.3 0 0 1 21.8 11c-2.3 4.4-9.8 9-9.8 9Z" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

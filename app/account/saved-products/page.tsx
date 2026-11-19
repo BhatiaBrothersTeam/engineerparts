@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ProductCard } from "@/components/cards/ProductCard";
+import { ProductGrid } from "@/components/cards/ProductGrid";
 import { AccountSectionHeader } from "@/components/account/AccountSectionHeader";
 import { IconTile } from "@/components/ui/IconTile";
 import { getAccountResource } from "@/lib/auth-server";
@@ -17,11 +17,7 @@ export default async function SavedProductsPage() {
     <div>
       <AccountSectionHeader eyebrow="Your shortlist" title="Saved products" description="Products saved to your customer account." />
       {!data ? <p role="alert" className="card p-5 text-sm text-signal-700">Saved products could not be loaded. Refresh to retry or sign in again. Your saved list has not been deleted.</p> : saved.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {saved.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        <ProductGrid products={saved} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" />
       ) : (
         <div className="card border-dashed p-8 text-center sm:p-10">
           <div className="mx-auto">

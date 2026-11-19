@@ -72,6 +72,10 @@ npm --version
 
 The development server reloads the page automatically when source files change. Stop it with `Ctrl+C`.
 
+Development output is kept in `.next-dev`, separate from the production build in `.next`.
+If a development server was already running when this configuration changed, restart it
+with `Ctrl+C` and `npm run dev`. This avoids production builds overwriting its chunks.
+
 WooCommerce configuration is required to display products. Without it, the product catalog is empty.
 
 ## Connect WooCommerce

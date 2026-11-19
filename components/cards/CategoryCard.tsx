@@ -6,7 +6,7 @@ export function CategoryCard({ category, count }: { category: Category; count: n
   return (
     <Link
       href={`/clearance/${category.slug}`}
-      className="group relative flex flex-col overflow-hidden rounded-card border border-navy-100 bg-white shadow-card transition-all hover:border-brand-300 hover:shadow-lift"
+      className="group relative flex flex-col overflow-hidden rounded-card border border-navy-100 bg-white shadow-card transition-[border-color,box-shadow] duration-200 hover:border-brand-300 hover:shadow-lift focus-visible:border-brand-300"
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-navy-50">
         <Image
@@ -14,7 +14,7 @@ export function CategoryCard({ category, count }: { category: Category; count: n
           alt={category.name}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+          className="object-cover transition-transform duration-200 motion-safe:group-hover:scale-[1.03]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-navy-950/70 via-navy-950/10 to-transparent" />
         <div className="absolute bottom-3 left-4 right-4">
@@ -26,7 +26,7 @@ export function CategoryCard({ category, count }: { category: Category; count: n
       </div>
       <div className="flex flex-1 items-start justify-between gap-4 p-4">
         <p className="text-sm leading-relaxed text-steel-600">{category.description}</p>
-        <span aria-hidden className="mt-0.5 shrink-0 text-brand-600 transition-transform group-hover:translate-x-1">
+        <span aria-hidden className="mt-0.5 shrink-0 text-brand-600 transition-transform duration-200 motion-safe:group-hover:translate-x-1">
           &rarr;
         </span>
       </div>

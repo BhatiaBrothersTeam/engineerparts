@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { SearchBar } from "@/components/SearchBar";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { StatRow } from "@/components/ui/StatRow";
 import { Reveal, RevealGroup } from "@/components/ui/Reveal";
@@ -67,39 +66,33 @@ export default async function HomePage() {
         <div className="shell relative grid grid-cols-[minmax(0,1fr)] items-stretch gap-7 py-7 sm:gap-8 sm:py-10 lg:grid-cols-2 lg:gap-12 lg:py-12">
           <div className="min-w-0 flex flex-col justify-center">
             <p className="eyebrow hero-rise text-brand-600">Engineer Parts &nbsp;|&nbsp; Industrial supplier</p>
-            <h1 className="text-display hero-rise mt-4 text-navy-900 [animation-delay:90ms]">
+            <h1 className="text-display hero-rise mt-4 max-w-[18ch] text-navy-900">
               Industrial parts.
               <br />
               Equipment and tools.
               <br />
               <span className="text-brand-600">Ready to source.</span>
             </h1>
-            <p className="text-lead hero-rise mt-4 max-w-2xl text-steel-600 [animation-delay:180ms] sm:mt-5">
+            <p className="text-lead hero-rise mt-4 max-w-xl text-steel-600 sm:mt-5">
               Find industrial equipment, spare parts and tools. Buy available clearance stock online or send our team an enquiry.
             </p>
 
-            <div className="hero-rise mt-6 grid grid-cols-1 gap-3 [animation-delay:270ms] min-[400px]:grid-cols-2 sm:mt-7 sm:flex sm:flex-wrap">
+            <div className="hero-rise mt-6 grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:mt-7 sm:flex sm:flex-wrap">
               <HeroActionMotion>
-                <Link href="/clearance" className="btn-primary w-full">
+                <Link href="/clearance" className="btn-primary w-full shadow-card transition-shadow duration-200 hover:shadow-lift">
                   Browse Clearance Stock
                 </Link>
               </HeroActionMotion>
               <HeroActionMotion>
-                <Link href="/enquiry" className="btn-outline w-full">
+                <Link href="/enquiry" className="btn-outline w-full hover:border-brand-500 hover:bg-brand-50 hover:text-brand-700">
                   Submit an Enquiry
                 </Link>
               </HeroActionMotion>
             </div>
 
-            <div className="hero-rise mt-7 [animation-delay:360ms] sm:mt-8">
-              <div className="hidden lg:block">
-                <SearchBar
-                variant="hero"
-                  placeholder="Search by brand, part number, model or product..."
-                />
-              </div>
+            <div className="hero-rise mt-7 sm:mt-8">
               {brands.length ? (
-                <div className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0 lg:mt-3">
+                <div className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
                   <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.12em] text-steel-500">
                     Popular
                   </span>
@@ -122,7 +115,7 @@ export default async function HomePage() {
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-900/90 via-brand-900/25 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy-950/95 via-brand-900/40 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-4 sm:p-7">
               <StatRow stats={inventoryStats} />
               <p className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-brand-200">

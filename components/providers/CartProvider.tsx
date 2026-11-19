@@ -9,6 +9,7 @@ import { useToast } from "@/components/providers/ToastProvider";
 interface CartContextValue {
   items: CartItem[];
   count: number;
+  additionRevision: number;
   subtotal: number;
   shipping: number;
   tax: number;
@@ -23,7 +24,7 @@ interface CartContextValue {
   ready: boolean;
   stockValid: boolean;
   refreshQuote: () => void;
-  addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
+  addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => boolean;
   updateQuantity: (productId: string, quantity: number) => void;
   removeItem: (productId: string) => void;
   clear: () => void;
@@ -69,6 +70,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [quoteError, setQuoteError] = useState(false);
   const [quoteRevision, setQuoteRevision] = useState(0);
   const [customerId, setCustomerId] = useState<number | null | undefined>(undefined);
+  const [additionRevision, setAdditionRevision] = useState(0);
   const owner = useRef<number | null | undefined>(undefined);
   const currentItems = useRef(items);
   const storageLoaded = useRef(false);
@@ -149,23 +151,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, quoteCountry, ready, quoteRevision]);
 
   const addItem = useCallback((item: Omit<CartItem, "quantity">, quantity = 1) => {
-    setItems((current) => {
-      const existing = current.find((line) => line.productId === item.productId);
-      if (existing) {
-        const next = Math.min(existing.quantity + quantity, item.maxQuantity);
-        return current.map((line) =>
-          line.productId === item.productId ? { ...line, quantity: next } : line,
-        );
-      }
-      return [...current, { ...item, quantity: Math.min(quantity, item.maxQuantity) }];
-    });
+    const current = currentItems.current;
+    const existing = current.find((line) => line.productId === item.productId);
+    const nextQuantity = Math.min((existing?.quantity ?? 0) + quantity, item.maxQuantity);
+    if (nextQuantity <= (existing?.quantity ?? 0)) return false;
+    const next = existing
+      ? current.map((line) => line.productId === item.productId ? { ...line, quantity: nextQuantity } : line)
+      : [...current, { ...item, quantity: nextQuantity }];
+    currentItems.current = next;
+    setItems(next);
+    setAdditionRevision((revision) => revision + 1);
     track("add_to_cart", {
       product_id: item.productId,
       sku: item.sku,
-      quantity,
+      quantity: nextQuantity - (existing?.quantity ?? 0),
       unit_price: item.unitPrice,
-      value: item.unitPrice * quantity,
+      value: item.unitPrice * (nextQuantity - (existing?.quantity ?? 0)),
     });
+    return true;
   }, []);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
@@ -310,6 +313,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return {
       items,
       count,
+      additionRevision,
       subtotal,
       shipping: quote?.shipping ?? 0,
       tax: quote?.tax ?? 0,
@@ -332,7 +336,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       quantityFor: (productId: string) =>
         items.find((line) => line.productId === productId)?.quantity ?? 0,
     };
-  }, [items, quote, quoteCountry, quoteLoading, quoteError, ready, refreshQuote, addItem, updateQuantity, removeItem, clear, selectCustomer]);
+  }, [items, additionRevision, quote, quoteCountry, quoteLoading, quoteError, ready, refreshQuote, addItem, updateQuantity, removeItem, clear, selectCustomer]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

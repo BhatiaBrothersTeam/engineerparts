@@ -1,3 +1,5 @@
+import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
+
 const wooCommerceUrl = process.env.WOOCOMMERCE_URL;
 const wooCommerceImagePattern = wooCommerceUrl
   ? [{ protocol: new URL(wooCommerceUrl).protocol.replace(":", ""), hostname: new URL(wooCommerceUrl).hostname }]
@@ -25,4 +27,7 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default (phase) => ({
+  ...nextConfig,
+  distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next-dev" : ".next",
+});

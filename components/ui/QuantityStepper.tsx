@@ -17,8 +17,9 @@ export function QuantityStepper({
         type="button"
         onClick={() => onChange(Math.max(1, value - 1))}
         disabled={disabled || value <= 1}
-        className="min-h-10 px-3 text-lg font-semibold text-navy-800 transition-colors hover:bg-navy-50 disabled:opacity-40"
+        className="min-h-11 min-w-11 px-3 text-lg font-semibold text-navy-800 transition-colors duration-200 hover:bg-navy-50 disabled:opacity-40"
         aria-label="Decrease quantity"
+        title="Decrease quantity"
       >
         &minus;
       </button>
@@ -36,8 +37,9 @@ export function QuantityStepper({
         type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={disabled || value >= max}
-        className="min-h-10 px-3 text-lg font-semibold text-navy-800 transition-colors hover:bg-navy-50 disabled:opacity-40"
+        className="min-h-11 min-w-11 px-3 text-lg font-semibold text-navy-800 transition-colors duration-200 hover:bg-navy-50 disabled:opacity-40"
         aria-label="Increase quantity"
+        title="Increase quantity"
       >
         +
       </button>

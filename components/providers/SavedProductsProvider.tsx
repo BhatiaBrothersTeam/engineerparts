@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useToast } from "@/components/providers/ToastProvider";
 import { CustomerError, customerErrorMessage, customerRequest } from "@/lib/customer-feedback";
@@ -10,6 +10,8 @@ const STORAGE_KEY = "engineerparts.saved-products";
 
 interface SavedProductsContextValue {
   ready: boolean;
+  busy: boolean;
+  count: number;
   isSaved: (productId: string) => boolean;
   toggle: (productId: string) => Promise<boolean>;
 }
@@ -24,7 +26,14 @@ export function SavedProductsProvider({ children }: { children: React.ReactNode 
   const { authenticated, loading } = useAuth();
   const { toast } = useToast();
   const [ids, setIds] = useState<Set<string>>(new Set());
+  const currentIds = useRef(ids);
+  const updateIds = useCallback((next: Set<string>) => {
+    currentIds.current = next;
+    setIds(next);
+  }, []);
   const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const pending = useRef(false);
 
   useEffect(() => {
     if (loading) return;
@@ -35,7 +44,7 @@ export function SavedProductsProvider({ children }: { children: React.ReactNode 
       toast(customerErrorMessage(error, "Browser-saved products could not be loaded. Allow site storage and refresh."), "error");
       guest = [];
     }
-    if (!authenticated) { setIds(new Set(guest)); setReady(true); return; }
+    if (!authenticated) { updateIds(new Set(guest)); setReady(true); return; }
     setReady(false);
     let cancelled = false;
     customerRequest<{ productIds: number[] }>("/api/account/saved-products", { cache: "no-store" }, "Saved products could not be loaded. Refresh to retry; your existing saved products have not been removed.")
@@ -59,7 +68,7 @@ export function SavedProductsProvider({ children }: { children: React.ReactNode 
             toast("Products were saved to your account, but the browser copy could not be cleared. Allow site storage to remove it.", "error");
           }
         }
-        setIds(account); setReady(true);
+        updateIds(account); setReady(true);
       })
       .catch((error) => {
         if (!cancelled) {
@@ -69,29 +78,38 @@ export function SavedProductsProvider({ children }: { children: React.ReactNode 
         }
       });
     return () => { cancelled = true; };
-  }, [authenticated, loading, toast]);
+  }, [authenticated, loading, toast, updateIds]);
 
   const toggle = useCallback(async (productId: string) => {
-    if (authenticated) {
-      const data = await customerRequest<{ saved?: boolean; productIds?: number[] }>("/api/account/saved-products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId }) }, "Your saved products could not be updated. Refresh to check the latest list, then retry.");
-      if (typeof data.saved !== "boolean" || !Array.isArray(data.productIds)) throw new CustomerError("Your saved products could not be confirmed. Refresh to check the latest list before retrying.");
-      setIds(new Set((data.productIds ?? []).map(String)));
-      return data.saved;
-    }
-    const next = new Set(ids);
-    const saved = !next.has(productId);
-    if (saved) next.add(productId); else next.delete(productId);
+    if (pending.current) throw new CustomerError("Please wait for the current saved product update to finish.");
+    pending.current = true;
+    setBusy(true);
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
-    } catch (error) {
-      logError("saved_products.storage_write_failed", { error });
-      throw new CustomerError("Your browser could not save this product. Allow site storage or sign in to save products to your account.");
+      if (!currentIds.current.has(productId) && currentIds.current.size >= 100) throw new CustomerError("You can save up to 100 products. Remove a saved product before adding another.");
+      if (authenticated) {
+        const data = await customerRequest<{ saved?: boolean; productIds?: number[] }>("/api/account/saved-products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productId }) }, "Your saved products could not be updated. Refresh to check the latest list, then retry.");
+        if (typeof data.saved !== "boolean" || !Array.isArray(data.productIds)) throw new CustomerError("Your saved products could not be confirmed. Refresh to check the latest list before retrying.");
+        updateIds(new Set(data.productIds.map(String)));
+        return data.saved;
+      }
+      const next = new Set(currentIds.current);
+      const saved = !next.has(productId);
+      if (saved) next.add(productId); else next.delete(productId);
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+      } catch (error) {
+        logError("saved_products.storage_write_failed", { error });
+        throw new CustomerError("Your browser could not save this product. Allow site storage or sign in to save products to your account.");
+      }
+      updateIds(next);
+      return saved;
+    } finally {
+      pending.current = false;
+      setBusy(false);
     }
-    setIds(next);
-    return saved;
-  }, [authenticated, ids]);
+  }, [authenticated, updateIds]);
 
-  const value = useMemo(() => ({ ready, isSaved: (productId: string) => ids.has(productId), toggle }), [ids, ready, toggle]);
+  const value = useMemo(() => ({ ready, busy, count: ids.size, isSaved: (productId: string) => ids.has(productId), toggle }), [ids, ready, busy, toggle]);
   return <SavedProductsContext.Provider value={value}>{children}</SavedProductsContext.Provider>;
 }
 

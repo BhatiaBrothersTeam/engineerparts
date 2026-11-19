@@ -180,8 +180,10 @@ function OrderAgainButton({ orderId }: { orderId: number }) {
     setLoading(true);
     try {
       const data = await customerRequest<{ items?: CartItem[] }>(`/api/account/orders/${orderId}/reorder`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }, "We could not check this order's products. Try again shortly, or browse the catalog to add products manually.");
-      for (const { quantity, ...item } of data.items ?? []) addItem(item, quantity);
       if (!data.items?.length) throw new CustomerError("No products from this order are currently available. Browse the catalog for alternatives or contact sales.");
+      let added = false;
+      for (const { quantity, ...item } of data.items) added = addItem(item, quantity) || added;
+      if (!added) throw new CustomerError("The available quantities are already in your cart.");
       toast("Available products added at current prices.");
       router.push("/cart");
     } catch (caught) {

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/providers/CartProvider";
 import { useEnquiry } from "@/components/providers/EnquiryProvider";
 import { useToast } from "@/components/providers/ToastProvider";
@@ -25,6 +26,9 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
   const { addItem } = useCart();
   const { openEnquiry } = useEnquiry();
   const { toast } = useToast();
+  const [added, setAdded] = useState(false);
+  const addedTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(addedTimer.current), []);
 
   const purchasable = isPurchasable(product.status) && product.price !== null && (product.quantity_available ?? 1) > 0;
   const wooPurchasable = isPurchasable(product.status) && product.price !== null && Boolean(product.woocommerce_checkout_url);
@@ -32,8 +36,8 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
   const list = layout === "list";
 
   function onAddToCart() {
-    if (!purchasable || product.price === null) return;
-    addItem(
+    if (!purchasable || product.price === null || addedTimer.current) return;
+    const success = addItem(
       {
         productId: product.id,
         sku: product.sku,
@@ -49,7 +53,13 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
       },
       1,
     );
-    toast(`${product.sku} added to cart`);
+    if (!success) {
+      toast("The available quantity is already in your cart.", "error");
+      return;
+    }
+    setAdded(true);
+    toast("Added to cart.");
+    addedTimer.current = setTimeout(() => { setAdded(false); addedTimer.current = undefined; }, 1200);
   }
 
   function onWhatsApp() {
@@ -96,7 +106,6 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
         className="absolute inset-0 z-0"
         aria-label={product.name}
       />
-      <SaveProductButton productId={product.id} compact className="absolute right-3 top-3 z-10" />
       <Link
         href={`/product/${product.slug}`}
         className={cn(
@@ -176,34 +185,35 @@ export function ProductCard({ product, layout = "grid" }: { product: Product; la
 
           <div className="product-card-actions">
             {product.listing_type === "Whole Lot" ? (
+              <div className="product-card-wide flex gap-2">
               <button
                 type="button"
                 onClick={() => openEnquiry({ mode: "lot", product })}
-                className="btn-primary btn-sm product-card-wide"
+                className="btn-primary btn-sm min-w-0 flex-1"
               >
                 Enquire for Whole Lot
               </button>
+              <SaveProductButton productId={product.id} compact />
+              </div>
             ) : (
               <>
-                {purchasable ? (
-                  <button type="button" onClick={onAddToCart} className="btn-outline btn-sm">
-                    Add to Cart
-                  </button>
-                ) : null}
+                <div className="product-card-wide flex gap-2">
+                  {purchasable ? (
+                    <button type="button" onClick={onAddToCart} disabled={added} className="btn-outline btn-sm min-w-0 flex-1" aria-live="polite">
+                      {added ? "Added to Cart" : "Add to Cart"}
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => openEnquiry({ mode: "product", product })} className="btn-navy btn-sm min-w-0 flex-1">
+                      {product.status === "Sold" ? "Enquire About Similar" : "Enquire Now"}
+                    </button>
+                  )}
+                  <SaveProductButton productId={product.id} compact />
+                </div>
                 {wooPurchasable ? (
-                  <button type="button" onClick={onWooCommerceCheckout} className="btn-primary btn-sm">
+                  <button type="button" onClick={onWooCommerceCheckout} className="btn-primary btn-sm product-card-wide">
                     Buy Now
                   </button>
                 ) : null}
-                {purchasable ? null : (
-                  <button
-                    type="button"
-                    onClick={() => openEnquiry({ mode: "product", product })}
-                    className="btn-navy btn-sm product-card-wide"
-                  >
-                    {product.status === "Sold" ? "Enquire About Similar" : "Enquire Now"}
-                  </button>
-                )}
               </>
             )}
             <div className="product-card-wide flex flex-wrap items-center justify-center gap-x-4 gap-y-1">

@@ -64,8 +64,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <TopBar />
                   <Header categories={categories} />
                   <main className="flex-1">{children}</main>
-                  <Footer categories={categories} />
                   <FloatingWhatsApp />
+                  <Footer categories={categories} />
                   <EnquiryModal />
                 </EnquiryProvider>
               </SavedProductsProvider>

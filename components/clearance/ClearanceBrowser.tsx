@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { createPortal } from "react-dom";
 import { ProductCard } from "@/components/cards/ProductCard";
+import { PRODUCT_PAGE_SIZE, ProductPagination, updateProductParams, useProductPage } from "@/components/ui/ProductPagination";
 import { IconTile } from "@/components/ui/IconTile";
 import { filterProducts } from "@/lib/search";
 import type { Product } from "@/lib/types";
@@ -60,10 +63,22 @@ export function ClearanceBrowser({
   lockedCategory?: string;
   syncCategoryFilter?: boolean;
 }) {
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<(typeof SORTS)[number]["id"]>("recent");
+  const params = useSearchParams();
+  const query = params.get("q") ?? "";
+  const sort = SORTS.find((option) => option.id === params.get("sort"))?.id ?? "recent";
   const [layout, setLayout] = useState<"grid" | "list">("grid");
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const filters = useMemo<Filters>(() => ({
+    brands: params.getAll("brands"), categories: params.getAll("categories"),
+    conditions: params.getAll("conditions"), locations: params.getAll("locations"),
+    availability: params.getAll("availability"), minPrice: params.get("minPrice") ?? "",
+    maxPrice: params.get("maxPrice") ?? "", minQuantity: params.get("minQuantity") ?? "",
+  }), [params]);
+  function setFilters(update: Filters | ((current: Filters) => Filters)) {
+    const next = typeof update === "function" ? update(filters) : update;
+    updateProductParams({ ...next });
+  }
+  function setQuery(value: string) { updateProductParams({ q: value }); }
+  function setSort(value: string) { updateProductParams({ sort: value }); }
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -116,6 +131,7 @@ export function ClearanceBrowser({
       sort,
     });
   }, [items, query, filters, sort, lockedCategory]);
+  const { page, pageCount, start } = useProductPage(results.length);
 
   function toggle<K extends keyof Filters>(key: K, value: string) {
     setFilters((current) => {
@@ -127,8 +143,7 @@ export function ClearanceBrowser({
   }
 
   function clearAll() {
-    setFilters(EMPTY_FILTERS);
-    setQuery("");
+    updateProductParams({ ...EMPTY_FILTERS, q: "" });
   }
 
   function removeValue(key: keyof Filters, value: string) {
@@ -143,7 +158,7 @@ export function ClearanceBrowser({
     setFilters((current) => ({ ...current, [key]: Array.isArray(current[key]) ? [] : "" }));
   }
 
-  const activeChips = useMemo(() => {
+  const activeChips = (() => {
     const chips: { key: string; label: string; onRemove: () => void }[] = [];
     const groups: { key: keyof Filters; title: string; label?: (value: string) => string }[] = [
       { key: "brands", title: "Brand" },
@@ -176,7 +191,7 @@ export function ClearanceBrowser({
       chips.push({ key: "minQuantity", label: `Min qty: ${filters.minQuantity}`, onRemove: () => clearField("minQuantity") });
     }
     return chips;
-  }, [filters, facets.categories, syncCategoryFilter]);
+  })();
 
   const sidebar = (
     <div className="space-y-1">
@@ -304,8 +319,9 @@ export function ClearanceBrowser({
                 type="button"
                 onClick={() => setLayout("grid")}
                 aria-label="Grid view"
+                title="Grid view"
                 aria-pressed={layout === "grid"}
-                className={cn("min-h-10 px-3 py-2.5", layout === "grid" ? "bg-navy-900 text-white" : "text-navy-700")}
+                className={cn("min-h-11 min-w-11 px-3 py-2.5 transition-colors duration-200", layout === "grid" ? "bg-navy-900 text-white" : "text-navy-700 hover:bg-navy-50")}
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
@@ -315,8 +331,9 @@ export function ClearanceBrowser({
                 type="button"
                 onClick={() => setLayout("list")}
                 aria-label="List view"
+                title="List view"
                 aria-pressed={layout === "list"}
-                className={cn("min-h-10 px-3 py-2.5", layout === "list" ? "bg-navy-900 text-white" : "text-navy-700")}
+                className={cn("min-h-11 min-w-11 px-3 py-2.5 transition-colors duration-200", layout === "list" ? "bg-navy-900 text-white" : "text-navy-700 hover:bg-navy-50")}
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M4 5h16v3H4zM4 10.5h16v3H4zM4 16h16v3H4z" />
@@ -375,19 +392,21 @@ export function ClearanceBrowser({
           </div>
         ) : (
           <div
+            id="product-grid"
             className={cn(
-              "mt-6",
+              "mt-6 scroll-mt-48",
               layout === "grid" ? "product-grid-sidebar" : "grid grid-cols-1 gap-5",
             )}
           >
-            {results.map((product) => (
+            {results.slice(start, start + PRODUCT_PAGE_SIZE).map((product) => (
               <ProductCard key={product.id} product={product} layout={layout} />
             ))}
           </div>
         )}
+        {results.length ? <ProductPagination total={results.length} page={page} pageCount={pageCount} gridId="product-grid" /> : null}
       </div>
 
-      {mobileOpen ? (
+      {mobileOpen ? createPortal(
         <div className="fixed inset-0 z-[60] lg:hidden">
           <button
             type="button"
@@ -406,8 +425,9 @@ export function ClearanceBrowser({
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-navy-200"
+                className="header-icon"
                 aria-label="Close filters"
+                title="Close filters"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
@@ -421,7 +441,8 @@ export function ClearanceBrowser({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );

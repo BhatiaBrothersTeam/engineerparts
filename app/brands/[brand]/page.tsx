@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHero } from "@/components/ui/PageHero";
 import { IconTile } from "@/components/ui/IconTile";
-import { ProductCard } from "@/components/cards/ProductCard";
+import { ProductGrid } from "@/components/cards/ProductGrid";
 import { TrackView } from "@/components/TrackView";
 import { getBrand, productsForBrand } from "@/lib/data/brands";
 import { formatNumber } from "@/lib/utils";
@@ -95,10 +95,8 @@ export default async function BrandPage({ params }: { params: { brand: string } 
           </div>
 
           {items.length ? (
-            <div className="mt-8 product-grid">
-              {items.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+            <div className="mt-8">
+              <ProductGrid products={items} />
             </div>
           ) : (
             <div className="card mx-auto mt-8 flex max-w-xl flex-col items-center p-10 text-center">

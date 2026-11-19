@@ -23,15 +23,15 @@ export function CategoryShowcaseCard({
       href={`/clearance/${category.slug}`}
       className={cn(
         "category-showcase-card group relative block min-h-[240px] overflow-hidden rounded-card border border-navy-100/80 p-6 shadow-card",
-        "transition-[transform,box-shadow,border-color] duration-500 ease-[var(--ease-out-soft)] hover:-translate-y-1.5 hover:border-brand-200 hover:shadow-lift",
+        "transition-[transform,box-shadow,border-color] duration-200 ease-[var(--ease-out-soft)] hover:border-brand-300 hover:shadow-lift focus-visible:border-brand-300 motion-safe:hover:-translate-y-0.5",
         tone,
         className,
       )}
     >
-      <span className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/80 bg-white text-brand-700 shadow-card transition-all duration-300 group-hover:-translate-y-0.5 group-hover:bg-brand-600 group-hover:text-white">
+      <span className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/80 bg-white text-brand-700 shadow-card transition-colors duration-200 group-hover:bg-brand-600 group-hover:text-white group-focus-visible:bg-brand-600 group-focus-visible:text-white">
         <CategoryIcon category={category.slug} className="h-5 w-5" />
       </span>
-      <span className="absolute right-6 top-6 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/90 text-lg text-navy-700 shadow-card backdrop-blur transition-all duration-300 group-hover:translate-x-1 group-hover:bg-navy-900 group-hover:text-white">
+      <span className="absolute right-6 top-6 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/90 text-lg text-navy-700 shadow-card backdrop-blur transition-colors duration-200 group-hover:bg-navy-900 group-hover:text-white">
         &rarr;
       </span>
 
@@ -41,7 +41,7 @@ export function CategoryShowcaseCard({
           alt=""
           fill
           sizes={imageSizes}
-          className="pointer-events-none !bottom-0 !left-auto !right-0 !top-auto !h-[70%] !w-[52%] object-contain object-right-bottom p-3 drop-shadow-xl mix-blend-multiply transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:translate-x-1 group-hover:scale-110"
+          className="pointer-events-none !bottom-0 !left-auto !right-0 !top-auto !h-[70%] !w-[52%] object-contain object-right-bottom p-3 drop-shadow-xl mix-blend-multiply transition-transform duration-200 ease-[var(--ease-out-soft)] motion-safe:group-hover:scale-[1.03]"
         />
       ) : null}
 

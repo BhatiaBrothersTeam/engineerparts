@@ -1,26 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { WholesaleProductCard } from "@/components/cards/WholesaleProductCard";
+import { PRODUCT_PAGE_SIZE, ProductPagination, updateProductParams, useProductPage } from "@/components/ui/ProductPagination";
 import { IconTile } from "@/components/ui/IconTile";
 import { filterProducts } from "@/lib/search";
 import type { Product } from "@/lib/types";
 import { formatNumber } from "@/lib/utils";
 
-const PAGE_SIZE = 24;
-
 export function WholesaleBrowser({ products }: { products: Product[] }) {
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
+  const query = useSearchParams().get("q") ?? "";
   const results = useMemo(() => filterProducts(products, { q: query }), [products, query]);
-  const pageCount = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
-  const pageItems = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const firstResult = results.length ? (page - 1) * PAGE_SIZE + 1 : 0;
-  const lastResult = Math.min(page * PAGE_SIZE, results.length);
+  const { page, pageCount, start } = useProductPage(results.length);
+  const pageItems = results.slice(start, start + PRODUCT_PAGE_SIZE);
+  const firstResult = results.length ? start + 1 : 0;
+  const lastResult = Math.min(start + PRODUCT_PAGE_SIZE, results.length);
 
   function updateQuery(value: string) {
-    setQuery(value);
-    setPage(1);
+    updateProductParams({ q: value });
   }
 
   return (
@@ -79,38 +77,13 @@ export function WholesaleBrowser({ products }: { products: Product[] }) {
 
       {pageItems.length ? (
         <>
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
+          <div id="product-grid" className="mt-6 scroll-mt-48 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
             {pageItems.map((product) => (
               <WholesaleProductCard key={product.id} product={product} />
             ))}
           </div>
 
-          {pageCount > 1 ? (
-            <nav className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-navy-100 pt-6 sm:flex-row" aria-label="Wholesale listings pagination">
-              <p className="text-sm text-steel-600">
-                Page <span className="font-semibold text-navy-900">{page}</span> of{" "}
-                <span className="font-semibold text-navy-900">{pageCount}</span>
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="btn-outline btn-sm"
-                  disabled={page === 1}
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary btn-sm"
-                  disabled={page === pageCount}
-                  onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
-                >
-                  Next
-                </button>
-              </div>
-            </nav>
-          ) : null}
+          <ProductPagination total={results.length} page={page} pageCount={pageCount} gridId="product-grid" />
         </>
       ) : (
         <div className="card mx-auto mt-6 flex max-w-xl flex-col items-center p-10 text-center">
