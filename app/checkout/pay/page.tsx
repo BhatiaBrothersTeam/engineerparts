@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { wordpressAccountRequest } from "@/lib/auth-server";
 import { logError } from "@/lib/logger";
 import { getWooCommerceOrderIfKeyMatches, isValidWooCommerceOrderKey } from "@/lib/woocommerce";
+import { currentClientIp } from "@/lib/client-ip";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -20,14 +21,14 @@ export default async function OrderPaymentPage({
   const orderId = Number(searchParams.order_id);
   const orderKey = searchParams.order_key ?? "";
   const valid = Number.isSafeInteger(orderId) && orderId > 0 && isValidWooCommerceOrderKey(orderKey);
-  const order = valid ? await getWooCommerceOrderIfKeyMatches(orderId, orderKey) : null;
+  const order = valid ? await getWooCommerceOrderIfKeyMatches(orderId, orderKey, currentClientIp()) : null;
   const reference = `order_id=${orderId}&order_key=${encodeURIComponent(orderKey)}`;
   const payable = order?.payment_method === "nomod" && order.status === "pending";
 
   async function pay() {
     "use server";
     if (!valid) redirect("/contact");
-    const current = await getWooCommerceOrderIfKeyMatches(orderId, orderKey);
+    const current = await getWooCommerceOrderIfKeyMatches(orderId, orderKey, currentClientIp());
     if (!current || current.payment_method !== "nomod" || current.status !== "pending") {
       redirect(`/checkout/success?${reference}`);
     }

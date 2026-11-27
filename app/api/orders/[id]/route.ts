@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWooCommerceOrderIfKeyMatches, isValidWooCommerceOrderKey } from "@/lib/woocommerce";
 import { logError } from "@/lib/logger";
+import { resolveClientIp } from "@/lib/client-ip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    const order = await getWooCommerceOrderIfKeyMatches(orderId, orderKey);
+    const order = await getWooCommerceOrderIfKeyMatches(orderId, orderKey, resolveClientIp(request.headers, request.ip));
     if (!order) {
       return NextResponse.json({ ok: false, error: "Order not found." }, { status: 404 });
     }

@@ -920,13 +920,15 @@ const ORDER_LOOKUP_WINDOW_MS = 60_000;
 const ORDER_LOOKUP_BUCKET_LIMIT = 5_000;
 type OrderLookupBucket = { count: number; resetAt: number };
 const orderLookupGlobal = globalThis as unknown as {
-  __engineerpartsOrderLookups?: Map<number, OrderLookupBucket>;
+  __engineerpartsOrderLookups?: Map<string, OrderLookupBucket>;
 };
 
-function allowOrderLookup(orderId: number): boolean {
+function allowOrderLookup(orderId: number, caller: string): boolean {
+  // Keyed by caller + order so a third party guessing keys cannot lock the real owner out.
+  const bucketKey = caller + ":" + orderId;
   const now = Date.now();
   const buckets = orderLookupGlobal.__engineerpartsOrderLookups ??= new Map();
-  const current = buckets.get(orderId);
+  const current = buckets.get(bucketKey);
   if (current && current.resetAt > now) {
     if (current.count >= ORDER_LOOKUP_LIMIT) return false;
     current.count += 1;
@@ -937,11 +939,11 @@ function allowOrderLookup(orderId: number): boolean {
       if (bucket.resetAt <= now) buckets.delete(id);
     }
     if (buckets.size >= ORDER_LOOKUP_BUCKET_LIMIT) {
-      const oldest = buckets.keys().next().value as number | undefined;
+      const oldest = buckets.keys().next().value as string | undefined;
       if (oldest !== undefined) buckets.delete(oldest);
     }
   }
-  buckets.set(orderId, { count: 1, resetAt: now + ORDER_LOOKUP_WINDOW_MS });
+  buckets.set(bucketKey, { count: 1, resetAt: now + ORDER_LOOKUP_WINDOW_MS });
   return true;
 }
 
@@ -949,9 +951,9 @@ export function isValidWooCommerceOrderKey(orderKey: string): boolean {
   return ORDER_KEY_PATTERN.test(orderKey);
 }
 
-export async function getWooCommerceOrderIfKeyMatches(orderId: number, orderKey: string): Promise<WooOrder | null> {
+export async function getWooCommerceOrderIfKeyMatches(orderId: number, orderKey: string, caller = "unknown"): Promise<WooOrder | null> {
   if (!Number.isSafeInteger(orderId) || orderId <= 0 || !isValidWooCommerceOrderKey(orderKey)) return null;
-  if (!allowOrderLookup(orderId)) return null;
+  if (!allowOrderLookup(orderId, caller)) return null;
   try {
     const order = await getWooCommerceOrder(orderId);
     const expected = Buffer.from(order.order_key);

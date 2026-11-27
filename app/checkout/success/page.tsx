@@ -4,6 +4,7 @@ import { PageHero } from "@/components/ui/PageHero";
 import { IconTile } from "@/components/ui/IconTile";
 import { OrderSuccessView } from "@/components/checkout/OrderSuccessView";
 import { getWooCommerceOrderIfKeyMatches, isValidWooCommerceOrderKey } from "@/lib/woocommerce";
+import { currentClientIp } from "@/lib/client-ip";
 
 export const metadata: Metadata = {
   title: "Order confirmation",
@@ -19,7 +20,7 @@ export default async function CheckoutSuccessPage({
   const orderKey = searchParams.order_key ?? "";
   const valid = Number.isSafeInteger(orderId) && orderId > 0 && isValidWooCommerceOrderKey(orderKey);
 
-  const order = valid ? await getWooCommerceOrderIfKeyMatches(orderId, orderKey) : null;
+  const order = valid ? await getWooCommerceOrderIfKeyMatches(orderId, orderKey, currentClientIp()) : null;
 
   return (
     <>

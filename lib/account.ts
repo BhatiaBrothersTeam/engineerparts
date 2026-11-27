@@ -112,7 +112,17 @@ export function validPassword(password: string): boolean {
 }
 
 export function safeRedirect(value: string | null | undefined, fallback = "/account"): string {
-  return value && /^\/(?![\\/])/.test(value) ? value : fallback;
+  // Browsers strip tab/newline and treat "\" as "/", so "/<TAB>/evil.com" or "/\evil.com" can become
+  // "//evil.com". Reject control characters and backslashes, then confirm the URL stays same-origin.
+  if (!value || value.length > 2048 || /[\u0000-\u001f\u007f\\]/.test(value)) return fallback;
+  if (!value.startsWith("/") || value.startsWith("//")) return fallback;
+  try {
+    const parsed = new URL(value, "http://localhost");
+    if (parsed.origin !== "http://localhost") return fallback;
+    return parsed.pathname + parsed.search + parsed.hash;
+  } catch {
+    return fallback;
+  }
 }
 
 export interface APIError {

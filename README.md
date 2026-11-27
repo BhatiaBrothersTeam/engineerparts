@@ -176,6 +176,22 @@ npm run typecheck
 npm run lint
 ```
 
+### Netlify deployment
+
+Keep the build command as `npm run build` and the publish directory as `.next`.
+The repository's `netlify.toml` excludes only `NEXT_PUBLIC_WHATSAPP_NUMBER` and
+`WORDPRESS_URL` from Netlify's environment-value secret scan: the contact number
+is embedded in browser bundles, and the WordPress address is a public URL used in
+documentation and test fixtures. `WORDPRESS_URL` must not contain credentials or
+secret query parameters.
+
+Secret scanning remains enabled for authentication credentials, including
+`ENGINEERPARTS_PROXY_SECRET`, `WOOCOMMERCE_CONSUMER_KEY`, and
+`WOOCOMMERCE_CONSUMER_SECRET`. Do not disable scanning or exclude entire files.
+Commit and push this configuration, then trigger a new Netlify deploy. If
+`SECRETS_SCAN_OMIT_KEYS` is also configured in Netlify, keep its value consistent
+with `netlify.toml`.
+
 ## Available scripts
 
 | Command | Purpose |

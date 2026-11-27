@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { wordpressAccountRequest } from "@/lib/auth-server";
 import { SESSION_COOKIE, type AuthResponse } from "@/lib/account";
 import { privateJson } from "@/lib/private-response";
+import { resolveClientIp } from "@/lib/client-ip";
+import { readLimitedText } from "@/lib/rate-limit";
 
 const POST_ACTIONS = new Set([
   "register",
@@ -26,7 +28,7 @@ function sameOrigin(request: NextRequest): boolean {
 }
 
 function clientIp(request: NextRequest): string {
-  return request.ip?.trim() || "unknown";
+  return resolveClientIp(request.headers, request.ip);
 }
 
 function responseBody(data: AuthResponse & { token?: string; expiresAt?: string }, status: number) {
@@ -88,13 +90,14 @@ export async function POST(request: NextRequest, { params }: { params: { action:
   if (!sameOrigin(request)) {
     return privateJson({ ok: false, error: "Invalid request origin." }, 403);
   }
-  if (Number(request.headers.get("content-length") ?? 0) > 32_768) {
+  const rawBody = await readLimitedText(request, 32_768);
+  if (rawBody === null) {
     return privateJson({ ok: false, error: "Request is too large." }, 413);
   }
 
   let body: unknown = {};
   try {
-    body = await request.json();
+    body = JSON.parse(rawBody);
   } catch {
     return privateJson({ ok: false, error: "Invalid request." }, 400);
   }

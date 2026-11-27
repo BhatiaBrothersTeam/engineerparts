@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { wordpressAccountRequest } from "@/lib/auth-server";
 import { SESSION_COOKIE } from "@/lib/account";
 import type { Lead } from "@/lib/types";
+import { resolveClientIp } from "@/lib/client-ip";
+import { rateLimit, readLimitedText } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,13 +33,16 @@ function validLead(value: unknown): value is Partial<Lead> {
 
 export async function POST(request: NextRequest) {
   if (request.headers.get("sec-fetch-site") === "cross-site") return NextResponse.json({ ok: false, error: "Invalid request origin." }, { status: 403 });
-  if (Number(request.headers.get("content-length") ?? 0) > 32_768) return NextResponse.json({ ok: false, error: "Request is too large." }, { status: 413 });
+  const clientIp = resolveClientIp(request.headers, request.ip);
+  if (!rateLimit("leads", clientIp, 10, 60 * 60_000)) return NextResponse.json({ ok: false, error: "Too many enquiries. Please try again later." }, { status: 429 });
+  const rawBody = await readLimitedText(request, 32_768);
+  if (rawBody === null) return NextResponse.json({ ok: false, error: "Request is too large." }, { status: 413 });
   let payload: unknown;
-  try { payload = await request.json(); } catch { return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 }); }
+  try { payload = JSON.parse(rawBody); } catch { return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 }); }
   if (!validLead(payload)) return NextResponse.json({ ok: false, error: "Please complete the required fields, including a valid email and phone number for contact or listing enquiries." }, { status: 422 });
   const result = await wordpressAccountRequest<EnquiryResponse>("enquiries", {
     method: "POST", body: payload, token: request.cookies.get(SESSION_COOKIE)?.value,
-    clientIp: request.ip?.trim() || "unknown",
+    clientIp,
   });
   return NextResponse.json(result.data.ok ? { ok: true, lead_id: result.data.lead_id, received_at: result.data.received_at, admin_email_sent: result.data.admin_email_sent } : { ok: false, error: result.data.error || "Unable to submit your enquiry." }, { status: result.status });
 }

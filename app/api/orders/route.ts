@@ -12,6 +12,8 @@ import { cookies } from "next/headers";
 import { SESSION_COOKIE } from "@/lib/account";
 import { isPlausibleAddress, isValidInternationalPhone } from "@/lib/utils";
 import { logError, redact } from "@/lib/logger";
+import { resolveClientIp } from "@/lib/client-ip";
+import { rateLimit, readLimitedText } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -126,11 +128,16 @@ export async function POST(request: NextRequest) {
   if (request.headers.get("sec-fetch-site") === "cross-site") {
     return NextResponse.json({ ok: false, error: "Invalid request origin." }, { status: 403 });
   }
-  if (Number(request.headers.get("content-length") ?? 0) > 65_536) {
+  // Anonymous order creation holds stock and sends email, so throttle per client IP.
+  if (!rateLimit("orders-create", resolveClientIp(request.headers, request.ip), 10, 10 * 60_000)) {
+    return NextResponse.json({ ok: false, error: "Too many order attempts. Please try again shortly." }, { status: 429 });
+  }
+  const rawBody = await readLimitedText(request, 65_536);
+  if (rawBody === null) {
     return NextResponse.json({ ok: false, error: "Request is too large." }, { status: 413 });
   }
   try {
-    const payload: unknown = await request.json();
+    const payload: unknown = JSON.parse(rawBody);
     if (!validPayload(payload)) {
       return NextResponse.json({ ok: false, error: "Invalid order details" }, { status: 400 });
     }
